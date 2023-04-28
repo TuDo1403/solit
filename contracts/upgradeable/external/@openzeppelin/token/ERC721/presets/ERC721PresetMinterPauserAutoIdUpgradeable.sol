@@ -3,10 +3,20 @@
 
 pragma solidity ^0.8.0;
 
-import {ERC721Upgradeable, ERC721BurnableUpgradeable} from "../extensions/ERC721BurnableUpgradeable.sol";
-import {ERC721PausableUpgradeable} from "../extensions/ERC721PausableUpgradeable.sol";
-import {IERC165Upgradeable, ERC721EnumerableUpgradeable} from "../extensions/ERC721EnumerableUpgradeable.sol";
-import {AccessControlEnumerableUpgradeable} from "../../../access/AccessControlEnumerableUpgradeable.sol";
+import {
+    ERC721Upgradeable,
+    ERC721BurnableUpgradeable
+} from "../extensions/ERC721BurnableUpgradeable.sol";
+import {
+    ERC721PausableUpgradeable
+} from "../extensions/ERC721PausableUpgradeable.sol";
+import {
+    IERC165Upgradeable,
+    ERC721EnumerableUpgradeable
+} from "../extensions/ERC721EnumerableUpgradeable.sol";
+import {
+    AccessControlEnumerableUpgradeable
+} from "../../../access/AccessControlEnumerableUpgradeable.sol";
 
 /**
  * @dev {ERC721} token, including:

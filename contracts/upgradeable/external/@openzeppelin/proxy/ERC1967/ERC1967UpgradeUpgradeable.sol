@@ -6,7 +6,9 @@ pragma solidity ^0.8.2;
 import {Initializable} from "../utils/Initializable.sol";
 
 import {IBeaconUpgradeable} from "../beacon/IBeaconUpgradeable.sol";
-import {IERC1822ProxiableUpgradeable} from "../../interfaces/draft-IERC1822Upgradeable.sol";
+import {
+    IERC1822ProxiableUpgradeable
+} from "../../interfaces/draft-IERC1822Upgradeable.sol";
 
 import {StorageSlotUpgradeable} from "../../utils/StorageSlotUpgradeable.sol";
 

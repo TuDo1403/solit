@@ -20,7 +20,7 @@ abstract contract AuthAccessCore is IAuthAccess, OwnableCore {
         _;
     }
 
-    function setAuthority(IAuthority authority_) external {
+    function setAuthority(IAuthority authority_) external virtual {
         IAuthority _authority = authority();
 
         if (
@@ -32,7 +32,7 @@ abstract contract AuthAccessCore is IAuthAccess, OwnableCore {
         _setAuthority(authority_);
     }
 
-    function authority() public view returns (IAuthority _authority) {
+    function authority() public view virtual returns (IAuthority _authority) {
         assembly {
             _authority := sload(_AUTHORITY_SLOT)
         }
@@ -52,13 +52,14 @@ abstract contract AuthAccessCore is IAuthAccess, OwnableCore {
 
     function _setAuthority(
         IAuthority authority_
-    ) internal nonZeroAddress(address(authority_)) {
+    ) internal virtual nonZeroAddress(address(authority_)) {
+        bytes32 authorityUpdated = AuthorityUpdated.selector;
+
         assembly {
             log4(
                 0x00,
                 0x00,
-                /// @dev value is equal to keccak256("AuthorityUpdated(address,address,address)")
-                0x6751992d0b63f06bf00f0e1b96ce6fa79f41ca798b8fbcb60458b69f50a90227,
+                authorityUpdated,
                 caller(),
                 sload(_AUTHORITY_SLOT),
                 authority_
@@ -75,10 +76,12 @@ abstract contract AuthAccessCore is IAuthAccess, OwnableCore {
         if (!isAuthorized(sender_, fnSig_)) revert Unauthorized();
     }
 
-    function _nonZeroAddress(address address_) internal pure {
+    function _nonZeroAddress(address address_) internal pure virtual {
+        bytes4 nonZeroAddress_ = NonZeroAddress.selector;
+
         assembly {
             if iszero(address_) {
-                mstore(0x00, 0xcdf31543)
+                mstore(0x00, nonZeroAddress_)
                 revert(0x1c, 0x04)
             }
         }

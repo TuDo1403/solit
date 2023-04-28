@@ -3,7 +3,11 @@
 
 pragma solidity ^0.8.10;
 
-import {ERC721Upgradeable, IERC165Upgradeable, IERC721Upgradeable} from "../ERC721Upgradeable.sol";
+import {
+    ERC721Upgradeable,
+    IERC165Upgradeable,
+    IERC721Upgradeable
+} from "../ERC721Upgradeable.sol";
 
 interface IERC721BurnableUpgradeable is IERC721Upgradeable {
     error ERC721Burnable__OnlyOwnerOrApproved();

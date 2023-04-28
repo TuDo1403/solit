@@ -3,4 +3,8 @@
 
 pragma solidity ^0.8.17;
 
-import {ERC20Upgradeable, ERC20PermitUpgradeable, IERC20PermitUpgradeable} from "./ERC20PermitUpgradeable.sol";
+import {
+    ERC20Upgradeable,
+    ERC20PermitUpgradeable,
+    IERC20PermitUpgradeable
+} from "./ERC20PermitUpgradeable.sol";

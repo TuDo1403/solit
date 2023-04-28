@@ -120,31 +120,23 @@ abstract contract RoleBasedAuthorityCore is
         bytes4 fnSig_,
         bool enabled_
     ) internal virtual {
+        bytes32 roleAccessUpdated = RoleAccessUpdated.selector;
+
         assembly {
             mstore(0x00, target_)
             mstore(0x20, _ROLE_ACCESS_SLOT)
             mstore(0x20, keccak256(0x00, 0x40))
             mstore(0x00, fnSig_)
+
             let key := keccak256(0x00, 0x40)
             let roleAccessBitmap := sload(key)
 
-            if enabled_ {
-                sstore(key, or(roleAccessBitmap, shl(role_, 1)))
-            }
-
-            if iszero(enabled_) {
-                sstore(key, and(roleAccessBitmap, not(shl(role_, 1))))
-            }
+            let bit := and(shr(role_, roleAccessBitmap), 1)
+            bit := xor(bit, enabled_)
+            sstore(key, xor(shl(role_, bit), roleAccessBitmap))
 
             mstore(0x00, enabled_)
-            log4(
-                0x00,
-                0x20,
-                0x302ddbd388fbb265296d4bcef3ef65012f6bdc349a36660eb3e330c6e18d055a,
-                role_,
-                target_,
-                fnSig_
-            )
+            log4(0x00, 0x20, roleAccessUpdated, role_, target_, fnSig_)
         }
     }
 
@@ -153,6 +145,8 @@ abstract contract RoleBasedAuthorityCore is
         bytes4 fnSig_,
         bool enabled_
     ) internal virtual {
+        bytes32 publicAccessUpdated = PublicAccessUpdated.selector;
+
         assembly {
             mstore(0x00, target_)
             mstore(0x20, _PUBLIC_ACCESS_SLOT)
@@ -161,13 +155,7 @@ abstract contract RoleBasedAuthorityCore is
             sstore(keccak256(0x00, 0x40), enabled_)
 
             mstore(0x00, enabled_)
-            log3(
-                0x00,
-                0x20,
-                0xee8f874469bf0d6a975e6085f54b97c7f91e9230c3cfaa31f881cb5585c02d9b,
-                target_,
-                fnSig_
-            )
+            log3(0x00, 0x20, publicAccessUpdated, target_, fnSig_)
         }
     }
 
@@ -176,29 +164,20 @@ abstract contract RoleBasedAuthorityCore is
         uint8 role_,
         bool enabled_
     ) internal virtual {
+        bytes32 userRoleUpdated = UserRoleUpdated.selector;
+
         assembly {
             mstore(0x00, account_)
             mstore(0x20, _USER_ROLES_SLOT)
 
             let key := keccak256(0x00, 0x40)
             let roleBitMap := sload(key)
-
-            if enabled_ {
-                sstore(key, or(roleBitMap, shl(role_, 1)))
-            }
-
-            if iszero(enabled_) {
-                sstore(key, and(roleBitMap, not(shl(role_, 1))))
-            }
+            let bit := and(shr(role_, roleBitMap), 1)
+            bit := xor(bit, enabled_)
+            sstore(key, xor(shl(role_, bit), roleBitMap))
 
             mstore(0x00, enabled_)
-            log3(
-                0x00,
-                0x20,
-                0x4c9bdd0c8e073eb5eda2250b18d8e5121ff27b62064fbeeeed4869bb99bc5bf2,
-                account_,
-                role_
-            )
+            log3(0x00, 0x20, userRoleUpdated, account_, role_)
         }
     }
 }

@@ -5,7 +5,9 @@ pragma solidity ^0.8.0;
 
 import {ERC721Upgradeable} from "../ERC721Upgradeable.sol";
 import {ERC2981Upgradeable} from "../../common/ERC2981Upgradeable.sol";
-import {ERC165Upgradeable} from "../../../utils/introspection/ERC165Upgradeable.sol";
+import {
+    ERC165Upgradeable
+} from "../../../utils/introspection/ERC165Upgradeable.sol";
 
 /**
  * @dev Extension of ERC721 with the ERC2981 NFT Royalty Standard, a standardized way to retrieve royalty payment

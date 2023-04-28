@@ -2,7 +2,9 @@
 // OpenZeppelin Contracts (last updated v4.6.0) (interfaces/IERC2981.sol)
 pragma solidity ^0.8.10;
 
-import {IERC165Upgradeable} from "../utils/introspection/IERC165Upgradeable.sol";
+import {
+    IERC165Upgradeable
+} from "../utils/introspection/IERC165Upgradeable.sol";
 
 /**
  * @dev Interface for the NFT Royalty Standard.

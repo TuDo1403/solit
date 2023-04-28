@@ -5,9 +5,14 @@ import {ERC721Upgradeable, IERC165Upgradeable} from "../ERC721Upgradeable.sol";
 
 import {IERC721PermitUpgradeable} from "./IERC721PermitUpgradeable.sol";
 
-import {ECDSAUpgradeable, EIP712Upgradeable} from "../../../utils/cryptography/EIP712Upgradeable.sol";
+import {
+    ECDSAUpgradeable,
+    EIP712Upgradeable
+} from "../../../utils/cryptography/EIP712Upgradeable.sol";
 
-import {IncrementalNonce} from "../../../../../../libraries/structs/IncrementalNonce.sol";
+import {
+    IncrementalNonce
+} from "../../../../../../libraries/structs/IncrementalNonce.sol";
 
 /// @title ERC721 with permit
 /// @notice Nonfungible tokens that support an approve via signature, i.e. permit

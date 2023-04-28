@@ -4,8 +4,12 @@
 pragma solidity ^0.8.0;
 
 import {Initializable} from "./Initializable.sol";
-import {ERC1967UpgradeUpgradeable} from "../ERC1967/ERC1967UpgradeUpgradeable.sol";
-import {IERC1822ProxiableUpgradeable} from "../../interfaces/draft-IERC1822Upgradeable.sol";
+import {
+    ERC1967UpgradeUpgradeable
+} from "../ERC1967/ERC1967UpgradeUpgradeable.sol";
+import {
+    IERC1822ProxiableUpgradeable
+} from "../../interfaces/draft-IERC1822Upgradeable.sol";
 
 error UUPSUpgradeable__OnlyCall();
 error UUPSUpgradeable__OnlyActiveProxy();

@@ -1,25 +1,23 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
-import {GuardSlot} from "./GuardSlot.sol";
-import {BitSlot} from "../../../libraries/structs/BitSlot.sol";
+import {StorageSlot} from "../../StorageSlot.sol";
+import {BitSlot} from "../../../libraries/udvts/Types.sol";
 
-abstract contract DelegateGuard is GuardSlot {
-    using BitSlot for bytes32;
-
+abstract contract DelegateGuard is StorageSlot {
     error AlreadyInitialized();
     error CallTypeRestricted();
 
     uint256 internal constant _ORIGINAL_BIT_INDEX = 96;
     uint256 internal constant _INITIALIZED_BIT_INDEX = 95;
 
-    modifier restrictDelegate(bool useDelegate_) virtual {
-        _restrictDelegate(useDelegate_);
+    modifier restrictDelegate(bool useDelegate) virtual {
+        _restrictDelegate(useDelegate);
         _;
     }
 
-    function _setOriginal() internal {
-        bytes32 slot = _slot();
+    function _setOriginal() internal virtual {
+        BitSlot slot = BitSlot.wrap(_slot());
 
         if (slot.get(uint8(_INITIALIZED_BIT_INDEX)))
             revert AlreadyInitialized();
@@ -53,11 +51,6 @@ abstract contract DelegateGuard is GuardSlot {
                 mstore(0x00, callTypeRestricted)
                 revert(0x1c, 0x04)
             }
-
-            // externalCall [0] ^ useDelegate_ [0] == [0] => revert
-            // externalCall [0] ^ useDelegate_ [1] == [1] => pass
-            // externalCall [1] ^ useDelegate_ [0] == [1] => pass
-            // externalCall [1] ^ useDelegate_ [1] == [0] => revert
         }
     }
 }

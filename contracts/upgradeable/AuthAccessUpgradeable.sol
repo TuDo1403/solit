@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
-import {Initializable} from "./external/@openzeppelin/proxy/utils/Initializable.sol";
+import {
+    Initializable
+} from "./external/@openzeppelin/proxy/utils/Initializable.sol";
 
 import {IAuthority, AuthAccessCore} from "../core/auth/AuthAccessCore.sol";
 

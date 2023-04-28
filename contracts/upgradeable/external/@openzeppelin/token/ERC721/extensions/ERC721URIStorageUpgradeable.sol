@@ -15,10 +15,10 @@ abstract contract ERC721URIStorageUpgradeable is ERC721Upgradeable {
     using SSTORE2 for *;
     using StringLib for uint256;
 
-    bytes32 internal _baseTokenURIPtr;
+    address internal _baseTokenURIPtr;
 
     // Optional mapping for token URIs
-    mapping(uint256 => bytes32) private __tokenURIs;
+    mapping(uint256 => address) private __tokenURIs;
 
     function __ERC721URIStorage_init(
         string calldata baseURI_

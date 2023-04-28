@@ -1,20 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
-import {GuardSlot} from "./GuardSlot.sol";
-import {BitSlot} from "../../../libraries/structs/BitSlot.sol";
+import {StorageSlot} from "../../StorageSlot.sol";
 
-interface IPausable {
-    function toggle(bool paused_) external;
+import {IPausable} from "./interfaces/IPausable.sol";
 
-    function status() external view returns (bool paused);
-}
+import {BitSlot} from "../../../libraries/udvts/Types.sol";
 
-abstract contract Pausable is GuardSlot, IPausable {
-    using BitSlot for bytes32;
-
-    error StatusNotMet(bool status);
-
+abstract contract Pausable is StorageSlot, IPausable {
     uint256 internal constant _STATUS_BIT_INDEX = 2;
 
     modifier requiresStatus(bool paused_) virtual {
@@ -22,17 +15,21 @@ abstract contract Pausable is GuardSlot, IPausable {
         _;
     }
 
-    event StatusUpdated(bool indexed paused);
+    function status() public view virtual returns (bool paused) {
+        paused = BitSlot.wrap(_slot()).get(uint8(_STATUS_BIT_INDEX));
+    }
 
     function _requiresStatus(bool paused_) internal view virtual {
-        if (_slot().get(uint8(_STATUS_BIT_INDEX)) != paused_)
-            revert StatusNotMet(paused_);
+        if (status() != paused_) revert StatusNotMet(paused_);
     }
 
     function _toggle(bool paused_) internal virtual {
         _requiresStatus(!paused_);
 
-        _slot().set({index: uint8(_STATUS_BIT_INDEX), isSet: paused_});
+        BitSlot.wrap(_slot()).set({
+            index: uint8(_STATUS_BIT_INDEX),
+            isSet: paused_
+        });
 
         emit StatusUpdated(paused_);
     }

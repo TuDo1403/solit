@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
-library SigUtil {
+library LibSig {
     /**
      * @dev Merges the ECDSA values into a single signature bytes
      * @param v ECDSA recovery value

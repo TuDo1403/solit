@@ -2,10 +2,15 @@
 pragma solidity >=0.8.10;
 
 import {ContextUpgradeable} from "../../utils/ContextUpgradeable.sol";
-import {ERC165Upgradeable, IERC165Upgradeable} from "../../utils/introspection/ERC165Upgradeable.sol";
+import {
+    ERC165Upgradeable,
+    IERC165Upgradeable
+} from "../../utils/introspection/ERC165Upgradeable.sol";
 
 import {IERC721Upgradeable} from "./IERC721Upgradeable.sol";
-import {IERC721MetadataUpgradeable} from "./extensions/IERC721MetadataUpgradeable.sol";
+import {
+    IERC721MetadataUpgradeable
+} from "./extensions/IERC721MetadataUpgradeable.sol";
 
 import {BitMapsUpgradeable} from "../../utils/structs/BitMapsUpgradeable.sol";
 

@@ -2,15 +2,13 @@
 pragma solidity ^0.8.17;
 
 import {Pausable} from "./guards/Pausable.sol";
-import {NonEOACall} from "./guards/NonEOACall.sol";
-import {NonProxyCall} from "./guards/NonProxyCall.sol";
+import {CallGuard} from "./guards/CallGuard.sol";
 import {NonReentrant} from "./guards/NonReentrant.sol";
 import {DelegateGuard} from "./guards/DelegateGuard.sol";
 
 abstract contract GuardCore is
     Pausable,
-    NonEOACall,
-    NonProxyCall,
+    CallGuard,
     NonReentrant,
     DelegateGuard
 {

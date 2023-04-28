@@ -4,8 +4,13 @@
 pragma solidity ^0.8.10;
 
 import {IERC2981Upgradeable} from "../../interfaces/IERC2981Upgradeable.sol";
-import {ERC165Upgradeable, IERC165Upgradeable} from "../..//utils/introspection/ERC165Upgradeable.sol";
-import {FixedPointMathLib} from "../../../../../libraries/FixedPointMathLib.sol";
+import {
+    ERC165Upgradeable,
+    IERC165Upgradeable
+} from "../..//utils/introspection/ERC165Upgradeable.sol";
+import {
+    FixedPointMathLib
+} from "../../../../../libraries/math/FixedPointMathLib.sol";
 
 /**
  * @dev Implementation of the NFT Royalty Standard, a standardized way to retrieve royalty payment information.

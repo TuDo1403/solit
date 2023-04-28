@@ -13,28 +13,26 @@ abstract contract OwnableCore is IOwnable {
         _;
     }
 
-    function transferOwnership(address account_) external onlyOwner {
+    function transferOwnership(address account_) external virtual onlyOwner {
         _transferOwnership(account_);
     }
 
-    function owner() public view returns (address _owner) {
+    function owner() public view virtual returns (address _owner) {
         assembly {
             _owner := sload(_OWNER_SLOT)
         }
     }
 
-    function _transferOwnership(address account_) internal {
+    function _transferOwnership(address account_) internal virtual {
         bytes32 ownershipTransferred = OwnershipTransferred.selector;
         assembly {
             sstore(_OWNER_SLOT, account_)
-
             log3(0x00, 0x00, ownershipTransferred, caller(), account_)
         }
     }
 
-    function _checkOwner(address account_) internal view {
+    function _checkOwner(address account_) internal view virtual {
         bytes4 unauthorized = Unauthorized.selector;
-
         assembly {
             if iszero(eq(sload(_OWNER_SLOT), account_)) {
                 mstore(0x00, unauthorized)

@@ -4,9 +4,15 @@
 pragma solidity ^0.8.17;
 
 import {ERC20Upgradeable} from "../ERC20Upgradeable.sol";
-import {ERC20BurnableUpgradeable} from "../extensions/ERC20BurnableUpgradeable.sol";
-import {ERC20PausableUpgradeable} from "../extensions/ERC20PausableUpgradeable.sol";
-import {AccessControlEnumerableUpgradeable} from "../../../access/AccessControlEnumerableUpgradeable.sol";
+import {
+    ERC20BurnableUpgradeable
+} from "../extensions/ERC20BurnableUpgradeable.sol";
+import {
+    ERC20PausableUpgradeable
+} from "../extensions/ERC20PausableUpgradeable.sol";
+import {
+    AccessControlEnumerableUpgradeable
+} from "../../../access/AccessControlEnumerableUpgradeable.sol";
 
 /**
  * @dev {ERC20} token, including:

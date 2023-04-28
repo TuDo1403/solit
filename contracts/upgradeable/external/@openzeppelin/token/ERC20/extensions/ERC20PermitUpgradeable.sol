@@ -7,9 +7,14 @@ import {ERC20Upgradeable} from "../ERC20Upgradeable.sol";
 
 import {IERC20PermitUpgradeable} from "./IERC20PermitUpgradeable.sol";
 
-import {ECDSAUpgradeable, EIP712Upgradeable} from "../../../utils/cryptography/EIP712Upgradeable.sol";
+import {
+    ECDSAUpgradeable,
+    EIP712Upgradeable
+} from "../../../utils/cryptography/EIP712Upgradeable.sol";
 
-import {IncrementalNonce} from "../../../../../../libraries/structs/IncrementalNonce.sol";
+import {
+    IncrementalNonce
+} from "../../../../../../libraries/structs/IncrementalNonce.sol";
 
 /**
  * @dev Implementation of the ERC20 Permit extension allowing approvals to be made via signatures, as defined in

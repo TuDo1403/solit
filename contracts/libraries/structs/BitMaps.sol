@@ -10,6 +10,22 @@ library BitMaps {
         mapping(uint256 => uint256) map;
     }
 
+    // /**
+    //  * @dev Returns whether the bit at `index` is set.
+    //  */
+    // function get(
+    //     mapping(uint256 => uint256) storage bitmap,
+    //     uint256 index
+    // ) internal view returns (bool isSet) {
+    //     assembly {
+    //         mstore(0x00, shr(8, index))
+    //         mstore(0x20, bitmap.slot)
+    //         // Assign isSet to whether the value is non zero.
+    //         isSet := and(sload(keccak256(0x00, 0x40)), shl(and(index, 0xff), 1))
+    //     }
+    //     return get(wrap(bitmap), index);
+    // }
+
     /**
      * @dev Returns whether the bit at `index` is set.
      */
@@ -18,10 +34,10 @@ library BitMaps {
         uint256 index
     ) internal view returns (bool isSet) {
         assembly {
-            mstore(0, shr(8, index))
-            mstore(32, bitmap.slot)
+            mstore(0x00, shr(8, index))
+            mstore(0x20, bitmap.slot)
             // Assign isSet to whether the value is non zero.
-            isSet := and(sload(keccak256(0, 64)), shl(and(index, 0xff), 1))
+            isSet := and(sload(keccak256(0x00, 0x40)), shl(and(index, 0xff), 1))
         }
     }
 
@@ -34,9 +50,10 @@ library BitMaps {
         bool shouldSet
     ) internal {
         assembly {
-            mstore(0, shr(8, index))
-            mstore(32, bitmap.slot)
-            let mapKey := keccak256(0, 64)
+            mstore(0x00, shr(8, index))
+            mstore(0x20, bitmap.slot)
+
+            let mapKey := keccak256(0x00, 0x40)
             let value := sload(mapKey)
 
             // The following sets the bit at `shift` without branching.

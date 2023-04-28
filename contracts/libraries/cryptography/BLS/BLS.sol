@@ -4,12 +4,12 @@ pragma solidity ^0.8.15;
 import {BN256G2} from "./BN256G2.sol";
 
 library BLS {
-    error BLS__LengthMismatch();
-    error BLS__InvalidSignature();
-    error BLS__NoPublicKeysGiven();
-    error BLS__SqrtModExpCallFailed();
-    error BLS__IsNonResidueFP2ModExpCallFailed();
-    error BLS__BadYCoordinateForUncompressingKey();
+    error LengthMismatch();
+    error InvalidSignature();
+    error NoPublicKeysGiven();
+    error SqrtModExpCallFailed();
+    error IsNonResidueFP2ModExpCallFailed();
+    error BadYCoordinateForUncompressingKey();
 
     // Field order
     uint256 private constant N =
@@ -80,7 +80,7 @@ library BLS {
                 invalid()
             }
         }
-        if (!success) revert BLS__InvalidSignature();
+        if (!success) revert InvalidSignature();
         return out[0] != 0;
     }
 
@@ -90,8 +90,8 @@ library BLS {
         uint256[2][] memory messages
     ) internal view returns (bool) {
         uint256 size = pubkeys.length;
-        if (size == 0) revert BLS__NoPublicKeysGiven();
-        if (size != messages.length) revert BLS__LengthMismatch();
+        if (size == 0) revert NoPublicKeysGiven();
+        if (size != messages.length) revert LengthMismatch();
 
         uint256 inputSize;
         unchecked {
@@ -135,7 +135,7 @@ library BLS {
                 invalid()
             }
         }
-        if (!success) revert BLS__InvalidSignature();
+        if (!success) revert InvalidSignature();
         return out[0] != 0;
     }
 
@@ -189,7 +189,7 @@ library BLS {
     ) internal pure returns (uint256[4] memory uncompressed) {
         uint256 desicion = compressed[0] & SIGN_MASK;
         if (y[0] & 1 == 1 && desicion != ODD_NUM)
-            revert BLS__BadYCoordinateForUncompressingKey();
+            revert BadYCoordinateForUncompressingKey();
 
         uncompressed[0] = compressed[0] & FIELD_MASK;
         uncompressed[1] = compressed[1];
@@ -203,7 +203,7 @@ library BLS {
     ) internal pure returns (uint256[2] memory uncompressed) {
         uint256 desicion = compressed & SIGN_MASK;
         if (y & 1 == 1 && desicion != ODD_NUM)
-            revert BLS__BadYCoordinateForUncompressingKey();
+            revert BadYCoordinateForUncompressingKey();
         return [compressed & FIELD_MASK, y];
     }
 
@@ -440,7 +440,7 @@ library BLS {
             )
             isNonResidue := eq(1, mload(freemem))
         }
-        if (!callSuccess) revert BLS__IsNonResidueFP2ModExpCallFailed();
+        if (!callSuccess) revert IsNonResidueFP2ModExpCallFailed();
         return !isNonResidue;
     }
 
@@ -476,7 +476,7 @@ library BLS {
             )
             isNonResidue := eq(1, mload(freemem))
         }
-        if (!callSuccess) revert BLS__IsNonResidueFP2ModExpCallFailed();
+        if (!callSuccess) revert IsNonResidueFP2ModExpCallFailed();
         return !isNonResidue;
     }
 
@@ -510,7 +510,7 @@ library BLS {
             x := mload(freemem)
             hasRoot := eq(xx, mulmod(x, x, N))
         }
-        if (!callSuccess) revert BLS__SqrtModExpCallFailed();
+        if (!callSuccess) revert SqrtModExpCallFailed();
     }
 
     function endomorphism(
