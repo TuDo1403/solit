@@ -35,6 +35,14 @@ abstract contract RoleBasedAuthorityCore is
         _setUserRole(account_, role_, enabled_);
     }
 
+    function setUserMultiRole(
+        address account_,
+        uint256 roles_,
+        bool enabled_
+    ) public virtual requiresAuth {
+        _setUserMultiRole(account_, roles_, enabled_);
+    }
+
     function canCall(
         address account_,
         address target_,
@@ -178,6 +186,25 @@ abstract contract RoleBasedAuthorityCore is
 
             mstore(0x00, enabled_)
             log3(0x00, 0x20, userRoleUpdated, account_, role_)
+        }
+    }
+
+    function _setUserMultiRole(
+        address account_,
+        uint256 roles_,
+        bool enable_
+    ) internal virtual {
+        bytes32 userRoleUpdate = UserRoleUpdated.selector;
+
+        assembly {
+            mstore(0x00, account_)
+            mstore(0x20, _USER_ROLES_SLOT)
+
+            let key := keccak256(0x00, 0x40)
+            sstore(key, roles_)
+
+            mstore(0x00, enable_)
+            log3(0x00, 0x20, userRoleUpdate, account_, roles_)
         }
     }
 }

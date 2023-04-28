@@ -6,7 +6,7 @@ import {IAuthority} from "../../interfaces/IAuthority.sol";
 interface IRoleBasedAuthority is IAuthority {
     event UserRoleUpdated(
         address indexed user,
-        uint8 indexed role,
+        uint256 indexed role,
         bool enabled
     );
 
