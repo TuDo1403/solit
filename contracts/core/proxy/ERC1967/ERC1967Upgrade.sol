@@ -17,14 +17,16 @@ import "../../../libraries/StorageSlot.sol";
  */
 abstract contract ERC1967Upgrade is IERC1967 {
     // This is the keccak-256 hash of "eip1967.proxy.rollback" subtracted by 1
-    bytes32 private constant _ROLLBACK_SLOT = 0x4910fdfa16fed3260ed0e7147f7cc6da11a60208b5b9406d12a635614ffd9143;
+    bytes32 private constant _ROLLBACK_SLOT =
+        0x4910fdfa16fed3260ed0e7147f7cc6da11a60208b5b9406d12a635614ffd9143;
 
     /**
      * @dev Storage slot with the address of the current implementation.
      * This is the keccak-256 hash of "eip1967.proxy.implementation" subtracted by 1, and is
      * validated in the constructor.
      */
-    bytes32 internal constant _IMPLEMENTATION_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
+    bytes32 internal constant _IMPLEMENTATION_SLOT =
+        0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
 
     /**
      * @dev Returns the current implementation address.
@@ -37,8 +39,13 @@ abstract contract ERC1967Upgrade is IERC1967 {
      * @dev Stores a new address in the EIP1967 implementation slot.
      */
     function _setImplementation(address newImplementation) private {
-        require(Address.isContract(newImplementation), "ERC1967: new implementation is not a contract");
-        StorageSlot.getAddressSlot(_IMPLEMENTATION_SLOT).value = newImplementation;
+        require(
+            Address.isContract(newImplementation),
+            "ERC1967: new implementation is not a contract"
+        );
+        StorageSlot
+            .getAddressSlot(_IMPLEMENTATION_SLOT)
+            .value = newImplementation;
     }
 
     /**
@@ -56,7 +63,11 @@ abstract contract ERC1967Upgrade is IERC1967 {
      *
      * Emits an {Upgraded} event.
      */
-    function _upgradeToAndCall(address newImplementation, bytes memory data, bool forceCall) internal {
+    function _upgradeToAndCall(
+        address newImplementation,
+        bytes memory data,
+        bool forceCall
+    ) internal {
         _upgradeTo(newImplementation);
         if (data.length > 0 || forceCall) {
             Address.functionDelegateCall(newImplementation, data);
@@ -68,15 +79,24 @@ abstract contract ERC1967Upgrade is IERC1967 {
      *
      * Emits an {Upgraded} event.
      */
-    function _upgradeToAndCallUUPS(address newImplementation, bytes memory data, bool forceCall) internal {
+    function _upgradeToAndCallUUPS(
+        address newImplementation,
+        bytes memory data,
+        bool forceCall
+    ) internal {
         // Upgrades from old implementations will perform a rollback test. This test requires the new
         // implementation to upgrade back to the old, non-ERC1822 compliant, implementation. Removing
         // this special case will break upgrade paths from old UUPS implementation to new ones.
         if (StorageSlot.getBooleanSlot(_ROLLBACK_SLOT).value) {
             _setImplementation(newImplementation);
         } else {
-            try IERC1822Proxiable(newImplementation).proxiableUUID() returns (bytes32 slot) {
-                require(slot == _IMPLEMENTATION_SLOT, "ERC1967Upgrade: unsupported proxiableUUID");
+            try IERC1822Proxiable(newImplementation).proxiableUUID() returns (
+                bytes32 slot
+            ) {
+                require(
+                    slot == _IMPLEMENTATION_SLOT,
+                    "ERC1967Upgrade: unsupported proxiableUUID"
+                );
             } catch {
                 revert("ERC1967Upgrade: new implementation is not UUPS");
             }
@@ -89,7 +109,8 @@ abstract contract ERC1967Upgrade is IERC1967 {
      * This is the keccak-256 hash of "eip1967.proxy.admin" subtracted by 1, and is
      * validated in the constructor.
      */
-    bytes32 internal constant _ADMIN_SLOT = 0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103;
+    bytes32 internal constant _ADMIN_SLOT =
+        0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103;
 
     /**
      * @dev Returns the current admin.
@@ -102,7 +123,10 @@ abstract contract ERC1967Upgrade is IERC1967 {
      * @dev Stores a new address in the EIP1967 admin slot.
      */
     function _setAdmin(address newAdmin) private {
-        require(newAdmin != address(0), "ERC1967: new admin is the zero address");
+        require(
+            newAdmin != address(0),
+            "ERC1967: new admin is the zero address"
+        );
         StorageSlot.getAddressSlot(_ADMIN_SLOT).value = newAdmin;
     }
 
@@ -120,7 +144,8 @@ abstract contract ERC1967Upgrade is IERC1967 {
      * @dev The storage slot of the UpgradeableBeacon contract which defines the implementation for this proxy.
      * This is bytes32(uint256(keccak256('eip1967.proxy.beacon')) - 1)) and is validated in the constructor.
      */
-    bytes32 internal constant _BEACON_SLOT = 0xa3f0ad74e5423aebfd80d3ef4346578335a9a72aeaee59ff6cb3582b35133d50;
+    bytes32 internal constant _BEACON_SLOT =
+        0xa3f0ad74e5423aebfd80d3ef4346578335a9a72aeaee59ff6cb3582b35133d50;
 
     /**
      * @dev Returns the current beacon.
@@ -133,7 +158,10 @@ abstract contract ERC1967Upgrade is IERC1967 {
      * @dev Stores a new beacon in the EIP1967 beacon slot.
      */
     function _setBeacon(address newBeacon) private {
-        require(Address.isContract(newBeacon), "ERC1967: new beacon is not a contract");
+        require(
+            Address.isContract(newBeacon),
+            "ERC1967: new beacon is not a contract"
+        );
         require(
             Address.isContract(IBeacon(newBeacon).implementation()),
             "ERC1967: beacon implementation is not a contract"
@@ -147,11 +175,18 @@ abstract contract ERC1967Upgrade is IERC1967 {
      *
      * Emits a {BeaconUpgraded} event.
      */
-    function _upgradeBeaconToAndCall(address newBeacon, bytes memory data, bool forceCall) internal {
+    function _upgradeBeaconToAndCall(
+        address newBeacon,
+        bytes memory data,
+        bool forceCall
+    ) internal {
         _setBeacon(newBeacon);
         emit BeaconUpgraded(newBeacon);
         if (data.length > 0 || forceCall) {
-            Address.functionDelegateCall(IBeacon(newBeacon).implementation(), data);
+            Address.functionDelegateCall(
+                IBeacon(newBeacon).implementation(),
+                data
+            );
         }
     }
 }

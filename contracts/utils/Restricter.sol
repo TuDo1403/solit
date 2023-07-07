@@ -7,7 +7,6 @@ error Restricter__NotNominee(bytes4);
 error Restricter__NotContract(address);
 error Restricter__DelegateCallFromUnknown(address);
 
-
 abstract contract Restricter {
     modifier onlyNominee(address nominee_) {
         if (msg.sender != nominee_) revert Restricter__NotNominee(msg.sig);
@@ -15,7 +14,7 @@ abstract contract Restricter {
     }
 
     modifier onlyDelegateCallFrom(address from_) {
-        if (address(this) != from_) 
+        if (address(this) != from_)
             revert Restricter__DelegateCallFromUnknown(address(this));
         _;
     }
@@ -36,30 +35,23 @@ abstract contract Restricter {
     }
 
     function _onlyContract(address addr_) internal view {
-        if (!_hasByteCode(addr_)) 
-            revert Restricter__NotContract(addr_);
+        if (!_hasByteCode(addr_)) revert Restricter__NotContract(addr_);
     }
 
     function _onlyEOA(address caller_, address txOrigin_) internal view {
-        if (
-            !
-            (
-                _isProxyCall(caller_, txOrigin_) ||
-                _hasByteCode(caller_)
-            )
-        )
+        if (!(_isProxyCall(caller_, txOrigin_) || _hasByteCode(caller_)))
             revert Restricter__NotEOA(msg.sig);
     }
 
     function _onlyProxy(address caller_, address txOrigin_) internal view {
-        if (
-            _isProxyCall(caller_, txOrigin_) && 
-            _hasByteCode(caller_)
-        )
+        if (_isProxyCall(caller_, txOrigin_) && _hasByteCode(caller_))
             revert Restricter__NotProxy(msg.sig);
     }
 
-    function _isProxyCall(address caller_, address txOrigin_) internal pure returns (bool) {
+    function _isProxyCall(
+        address caller_,
+        address txOrigin_
+    ) internal pure returns (bool) {
         return caller_ != txOrigin_;
     }
 
