@@ -10,6 +10,8 @@ interface IConditionalUpgrade {
     // Log when revert or require
     event Log(string msg);
 
+    error ConditionalUpgrade__AddressNotUnique();
+
     /**
      * @dev Executes the selfUpgrade function, upgrading to the new contract implementation.
      */
@@ -48,6 +50,9 @@ abstract contract ConditionalUpgrade is
         onlyContract(newImplement_)
         onlyContract(prevImplement_)
     {
+        if (_areUnique(proxy_, newImplement_, prevImplement_))
+            revert ConditionalUpgrade__AddressNotUnique();
+
         PROXY = proxy_;
         NEW_IMPLEMENT = newImplement_;
         PREV_IMPLEMENT = prevImplement_;
@@ -67,6 +72,17 @@ abstract contract ConditionalUpgrade is
         onlyDelegateCallFrom(PROXY)
     {
         _upgradeTo(NEW_IMPLEMENT);
+    }
+
+    function _areUnique(
+        address proxy_,
+        address newImpl_,
+        address prevImpl_
+    ) internal pure returns (bool) {
+        return
+            !(proxy_ == newImpl_ ||
+                proxy_ == prevImpl_ ||
+                newImpl_ == prevImpl_);
     }
 
     function _isSatisfy() internal view virtual returns (bool) {}
