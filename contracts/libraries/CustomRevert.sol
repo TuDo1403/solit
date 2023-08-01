@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.17;
 
 error Execution_Failed();
 
@@ -11,7 +11,7 @@ library CustomRevert {
         if (returnData.length > 0) {
             assembly {
                 let revertSize := mload(returnData)
-                revert(add(revertData, 0x20), revertLength)
+                revert(add(returnData, 0x20), revertSize)
             }
         } else {
             customRevert();
