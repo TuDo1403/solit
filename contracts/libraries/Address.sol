@@ -157,6 +157,7 @@ library Address {
         string memory errorMessage
     ) internal returns (bytes memory) {
         require(
+            value == 0 ||
             address(this).balance >= value,
             "Address: insufficient balance for call"
         );
