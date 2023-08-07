@@ -80,8 +80,11 @@ library BitMaps {
             mstore(32, bitmap.slot)
             let key := keccak256(0, 64)
             let value := sload(key)
-            value := or(value, shl(and(index, 0xff), 1))
-            sstore(key, value)
+            let mask := shl(and(index, 0xff), 1)
+            if iszero(eq(and(value, mask), mask)) {
+                value := or(value, mask)
+                sstore(key, value)
+            }
         }
     }
 
@@ -90,5 +93,17 @@ library BitMaps {
      */
     function unset(BitMap storage bitmap, uint256 index) internal {
         bitmap.map[index >> 8] &= ~(1 << (index & 0xff));
+        assembly {
+            mstore(0, shr(8, index))
+            mstore(32, bitmap.slot)
+            let key := keccak256(0, 64)
+            let value := sload(key)
+            let mask := shl(and(index, 0xff), 1)
+            // value & mask != 0
+            if iszero(iszero(and(value, mask))) {
+                value := or(value, mask)
+                sstore(key, value)
+            }
+        }
     }
 }
