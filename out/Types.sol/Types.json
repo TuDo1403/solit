@@ -1,0 +1,271 @@
+{
+  "abi": [],
+  "bytecode": {
+    "object": "0x",
+    "linkReferences": {}
+  },
+  "deployedBytecode": {
+    "object": "0x",
+    "linkReferences": {}
+  },
+  "ast": {
+    "absolutePath": "contracts/types/Types.sol",
+    "id": 2462,
+    "exportedSymbols": {
+      "LibTUint256Slot": [
+        2677
+      ],
+      "TUint256Slot": [
+        2446
+      ]
+    },
+    "nodeType": "SourceUnit",
+    "src": "32:510:10",
+    "nodes": [
+      {
+        "id": 2442,
+        "nodeType": "PragmaDirective",
+        "src": "32:24:10",
+        "nodes": [],
+        "literals": [
+          "solidity",
+          "^",
+          "0.8",
+          ".20"
+        ]
+      },
+      {
+        "id": 2444,
+        "nodeType": "ImportDirective",
+        "src": "58:64:10",
+        "nodes": [],
+        "absolutePath": "contracts/types/libraries/LibTUint256Slot.sol",
+        "file": "./libraries/LibTUint256Slot.sol",
+        "nameLocation": "-1:-1:-1",
+        "scope": 2462,
+        "sourceUnit": 2678,
+        "symbolAliases": [
+          {
+            "foreign": {
+              "id": 2443,
+              "name": "LibTUint256Slot",
+              "nodeType": "Identifier",
+              "overloadedDeclarations": [],
+              "referencedDeclaration": 2677,
+              "src": "66:15:10",
+              "typeDescriptions": {}
+            },
+            "nameLocation": "-1:-1:-1"
+          }
+        ],
+        "unitAlias": ""
+      },
+      {
+        "id": 2446,
+        "nodeType": "UserDefinedValueTypeDefinition",
+        "src": "124:29:10",
+        "nodes": [],
+        "canonicalName": "TUint256Slot",
+        "name": "TUint256Slot",
+        "nameLocation": "129:12:10",
+        "underlyingType": {
+          "id": 2445,
+          "name": "bytes32",
+          "nodeType": "ElementaryTypeName",
+          "src": "145:7:10",
+          "typeDescriptions": {
+            "typeIdentifier": "t_bytes32",
+            "typeString": "bytes32"
+          }
+        }
+      },
+      {
+        "id": 2461,
+        "nodeType": "UsingForDirective",
+        "src": "155:386:10",
+        "nodes": [],
+        "functionList": [
+          {
+            "function": {
+              "id": 2447,
+              "name": "LibTUint256Slot.add",
+              "nameLocations": [
+                "167:15:10",
+                "183:3:10"
+              ],
+              "nodeType": "IdentifierPath",
+              "referencedDeclaration": 2552,
+              "src": "167:19:10"
+            }
+          },
+          {
+            "function": {
+              "id": 2448,
+              "name": "LibTUint256Slot.sub",
+              "nameLocations": [
+                "192:15:10",
+                "208:3:10"
+              ],
+              "nodeType": "IdentifierPath",
+              "referencedDeclaration": 2539,
+              "src": "192:19:10"
+            }
+          },
+          {
+            "function": {
+              "id": 2449,
+              "name": "LibTUint256Slot.mul",
+              "nameLocations": [
+                "217:15:10",
+                "233:3:10"
+              ],
+              "nodeType": "IdentifierPath",
+              "referencedDeclaration": 2513,
+              "src": "217:19:10"
+            }
+          },
+          {
+            "function": {
+              "id": 2450,
+              "name": "LibTUint256Slot.div",
+              "nameLocations": [
+                "242:15:10",
+                "258:3:10"
+              ],
+              "nodeType": "IdentifierPath",
+              "referencedDeclaration": 2526,
+              "src": "242:19:10"
+            }
+          },
+          {
+            "function": {
+              "id": 2451,
+              "name": "LibTUint256Slot.load",
+              "nameLocations": [
+                "267:15:10",
+                "283:4:10"
+              ],
+              "nodeType": "IdentifierPath",
+              "referencedDeclaration": 2489,
+              "src": "267:20:10"
+            }
+          },
+          {
+            "function": {
+              "id": 2452,
+              "name": "LibTUint256Slot.store",
+              "nameLocations": [
+                "293:15:10",
+                "309:5:10"
+              ],
+              "nodeType": "IdentifierPath",
+              "referencedDeclaration": 2500,
+              "src": "293:21:10"
+            }
+          },
+          {
+            "function": {
+              "id": 2453,
+              "name": "LibTUint256Slot.addAssign",
+              "nameLocations": [
+                "320:15:10",
+                "336:9:10"
+              ],
+              "nodeType": "IdentifierPath",
+              "referencedDeclaration": 2654,
+              "src": "320:25:10"
+            }
+          },
+          {
+            "function": {
+              "id": 2454,
+              "name": "LibTUint256Slot.subAssign",
+              "nameLocations": [
+                "351:15:10",
+                "367:9:10"
+              ],
+              "nodeType": "IdentifierPath",
+              "referencedDeclaration": 2676,
+              "src": "351:25:10"
+            }
+          },
+          {
+            "function": {
+              "id": 2455,
+              "name": "LibTUint256Slot.preDecrement",
+              "nameLocations": [
+                "382:15:10",
+                "398:12:10"
+              ],
+              "nodeType": "IdentifierPath",
+              "referencedDeclaration": 2609,
+              "src": "382:28:10"
+            }
+          },
+          {
+            "function": {
+              "id": 2456,
+              "name": "LibTUint256Slot.postDecrement",
+              "nameLocations": [
+                "416:15:10",
+                "432:13:10"
+              ],
+              "nodeType": "IdentifierPath",
+              "referencedDeclaration": 2632,
+              "src": "416:29:10"
+            }
+          },
+          {
+            "function": {
+              "id": 2457,
+              "name": "LibTUint256Slot.preIncrement",
+              "nameLocations": [
+                "451:15:10",
+                "467:12:10"
+              ],
+              "nodeType": "IdentifierPath",
+              "referencedDeclaration": 2569,
+              "src": "451:28:10"
+            }
+          },
+          {
+            "function": {
+              "id": 2458,
+              "name": "LibTUint256Slot.postIncrement",
+              "nameLocations": [
+                "485:15:10",
+                "501:13:10"
+              ],
+              "nodeType": "IdentifierPath",
+              "referencedDeclaration": 2592,
+              "src": "485:29:10"
+            }
+          }
+        ],
+        "global": true,
+        "typeName": {
+          "id": 2460,
+          "nodeType": "UserDefinedTypeName",
+          "pathNode": {
+            "id": 2459,
+            "name": "TUint256Slot",
+            "nameLocations": [
+              "521:12:10"
+            ],
+            "nodeType": "IdentifierPath",
+            "referencedDeclaration": 2446,
+            "src": "521:12:10"
+          },
+          "referencedDeclaration": 2446,
+          "src": "521:12:10",
+          "typeDescriptions": {
+            "typeIdentifier": "t_userDefinedValueType$_TUint256Slot_$2446",
+            "typeString": "TUint256Slot"
+          }
+        }
+      }
+    ],
+    "license": "MIT"
+  },
+  "id": 10
+}

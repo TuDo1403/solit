@@ -1,0 +1,3889 @@
+{
+  "abi": [],
+  "bytecode": {
+    "object": "0x60566037600b82828239805160001a607314602a57634e487b7160e01b600052600060045260246000fd5b30600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600080fdfea2646970667358221220cac008abcc21651545c2929f8b020fe35fc2faf38751e3fe2a4993755d04369f64736f6c63430008150033",
+    "sourceMap": "192:7142:11:-:0;;;;;;;;;;;;;;;-1:-1:-1;;;192:7142:11;;;;;;;;;;;;;;;;;",
+    "linkReferences": {}
+  },
+  "deployedBytecode": {
+    "object": "0x73000000000000000000000000000000000000000030146080604052600080fdfea2646970667358221220cac008abcc21651545c2929f8b020fe35fc2faf38751e3fe2a4993755d04369f64736f6c63430008150033",
+    "sourceMap": "192:7142:11:-:0;;;;;;;;",
+    "linkReferences": {}
+  },
+  "methodIdentifiers": {},
+  "rawMetadata": "{\"compiler\":{\"version\":\"0.8.21+commit.d9974bed\"},\"language\":\"Solidity\",\"output\":{\"abi\":[],\"devdoc\":{\"details\":\"Library for handling unsigned 256-bit integers.\",\"kind\":\"dev\",\"methods\":{},\"stateVariables\":{\"ARITHMETIC_ERROR_CODE\":{\"details\":\"error code for {Arithmetic over/underflow} error\"},\"DIVISION_ERROR_CODE\":{\"details\":\"error code for {Division or modulo by 0} error\"},\"PANIC_ERROR_SIGNATURE\":{\"details\":\"value is equal to bytes4(keccak256(\\\"Panic(uint256)\\\"))see: https://github.com/foundry-rs/forge-std/blob/master/src/StdError.sol\"}},\"title\":\"LibTUint256Slot\",\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/types/libraries/LibTUint256Slot.sol\":\"LibTUint256Slot\"},\"evmVersion\":\"paris\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\",\"useLiteralContent\":true},\"optimizer\":{\"enabled\":true,\"runs\":1000000},\"remappings\":[\":@openzeppelin/=node_modules/@openzeppelin/\",\":@solit/contracts/=contracts/\",\":contracts-upgradeable/=node_modules/@openzeppelin/contracts-upgradeable/\",\":ds-test/=lib/forge-std/lib/ds-test/src/\",\":eth-gas-reporter/=node_modules/eth-gas-reporter/\",\":forge-std/=lib/forge-std/src/\",\":hardhat/=node_modules/hardhat/\",\":sample-projects/=node_modules/hardhat/sample-projects/\",\":solady/=node_modules/solady/\",\":solmate/=node_modules/solmate/\"]},\"sources\":{\"contracts/types/Types.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\npragma solidity ^0.8.20;\\n\\nimport {LibTUint256Slot} from \\\"./libraries/LibTUint256Slot.sol\\\";\\n\\ntype TUint256Slot is bytes32;\\n\\nusing {\\n    LibTUint256Slot.add,\\n    LibTUint256Slot.sub,\\n    LibTUint256Slot.mul,\\n    LibTUint256Slot.div,\\n    LibTUint256Slot.load,\\n    LibTUint256Slot.store,\\n    LibTUint256Slot.addAssign,\\n    LibTUint256Slot.subAssign,\\n    LibTUint256Slot.preDecrement,\\n    LibTUint256Slot.postDecrement,\\n    LibTUint256Slot.preIncrement,\\n    LibTUint256Slot.postIncrement\\n} for TUint256Slot global;\\n\",\"keccak256\":\"0xc798d76e74a9246a6808316ca7047ceb3d818ac6b8d866afb4812732a60cf075\",\"license\":\"MIT\"},\"contracts/types/libraries/LibTUint256Slot.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\npragma solidity ^0.8.20;\\n\\nimport {TUint256Slot} from \\\"../Types.sol\\\";\\n\\n/**\\n * @title LibTUint256Slot\\n * @dev Library for handling unsigned 256-bit integers.\\n */\\nlibrary LibTUint256Slot {\\n    /// @dev value is equal to bytes4(keccak256(\\\"Panic(uint256)\\\"))\\n    /// @dev see: https://github.com/foundry-rs/forge-std/blob/master/src/StdError.sol\\n    uint256 private constant PANIC_ERROR_SIGNATURE = 0x4e487b71;\\n    /// @dev error code for {Arithmetic over/underflow} error\\n    uint256 private constant ARITHMETIC_ERROR_CODE = 0x11;\\n    /// @dev error code for {Division or modulo by 0} error\\n    uint256 private constant DIVISION_ERROR_CODE = 0x12;\\n\\n    /**\\n     * @dev Loads the value of the TUint256Slot variable.\\n     * @param self The TUint256Slot variable.\\n     * @return val The loaded value.\\n     */\\n    function load(TUint256Slot self) internal view returns (uint256 val) {\\n        assembly {\\n            val := sload(self)\\n        }\\n    }\\n\\n    /**\\n     * @dev Stores a value into the TUint256Slot variable.\\n     * @param self The TUint256Slot variable.\\n     * @param other The value to be stored.\\n     */\\n    function store(TUint256Slot self, uint256 other) internal {\\n        assembly {\\n            sstore(self, other)\\n        }\\n    }\\n\\n    /**\\n     * @dev Multiplies the TUint256Slot variable by a given value.\\n     * @param self The TUint256Slot variable.\\n     * @param other The value to multiply by.\\n     * @return res The resulting value after multiplication.\\n     */\\n    function mul(\\n        TUint256Slot self,\\n        uint256 other\\n    ) internal view returns (uint256 res) {\\n        assembly {\\n            let storedVal := sload(self)\\n            if iszero(iszero(storedVal)) {\\n                res := mul(storedVal, other)\\n\\n                // Overflow check\\n                if iszero(eq(other, div(res, storedVal))) {\\n                    // Store 4 bytes the function selector of Panic(uint256)\\n                    // Equivalent to revert Panic(uint256)\\n                    mstore(0x00, PANIC_ERROR_SIGNATURE)\\n                    // Store 4 bytes of division error code in the next slot\\n                    mstore(0x20, ARITHMETIC_ERROR_CODE)\\n                    // Revert 36 bytes of error starting from 0x1c\\n                    revert(0x1c, 0x24)\\n                }\\n            }\\n        }\\n    }\\n\\n    /**\\n     * @dev Divides the TUint256Slot variable by a given value.\\n     * @param self The TUint256Slot variable.\\n     * @param other The value to divide by.\\n     * @return res The resulting value after division.\\n     */\\n    function div(\\n        TUint256Slot self,\\n        uint256 other\\n    ) internal view returns (uint256 res) {\\n        assembly {\\n            let storedVal := sload(self)\\n            // revert if divide by zero\\n            if iszero(other) {\\n                // Store 4 bytes the function selector of Panic(uint256)\\n                // Equivalent to revert Panic(uint256)\\n                mstore(0x00, PANIC_ERROR_SIGNATURE)\\n                // Store 4 bytes of division error code in the next slot\\n                mstore(0x20, DIVISION_ERROR_CODE)\\n                // Revert 36 bytes of error starting from 0x1c\\n                revert(0x1c, 0x24)\\n            }\\n            res := div(storedVal, other)\\n        }\\n    }\\n\\n    /**\\n     * @dev Subtracts a given value from the TUint256Slot variable.\\n     * @param self The TUint256Slot variable.\\n     * @param other The value to subtract.\\n     * @return res The resulting value after subtraction.\\n     */\\n    function sub(\\n        TUint256Slot self,\\n        uint256 other\\n    ) internal view returns (uint256 res) {\\n        assembly {\\n            let storedVal := sload(self)\\n\\n            // Underflow check\\n            if lt(storedVal, other) {\\n                // Store 4 bytes the function selector of Panic(uint256)\\n                // Equivalent to revert Panic(uint256)\\n                mstore(0x00, PANIC_ERROR_SIGNATURE)\\n                // Store 4 bytes of division error code in the next slot\\n                mstore(0x20, ARITHMETIC_ERROR_CODE)\\n                // Revert 36 bytes of error starting from 0x1c\\n                revert(0x1c, 0x24)\\n            }\\n\\n            res := sub(storedVal, other)\\n        }\\n    }\\n\\n    /**\\n     * @dev Adds a given value to the TUint256Slot variable.\\n     * @param self The TUint256Slot variable.\\n     * @param other The value to add.\\n     * @return res The resulting value after addition.\\n     */\\n    function add(\\n        TUint256Slot self,\\n        uint256 other\\n    ) internal view returns (uint256 res) {\\n        assembly {\\n            let storedVal := sload(self)\\n            res := add(storedVal, other)\\n\\n            // Overflow check\\n            if lt(res, other) {\\n                // Store 4 bytes the function selector of Panic(uint256)\\n                // Equivalent to revert Panic(uint256)\\n                mstore(0x00, PANIC_ERROR_SIGNATURE)\\n                // Store 4 bytes of division error code in the next slot\\n                mstore(0x20, ARITHMETIC_ERROR_CODE)\\n                // Revert 36 bytes of error starting from 0x1c\\n                revert(0x1c, 0x24)\\n            }\\n        }\\n    }\\n\\n    /**\\n     * @dev Increments the TUint256Slot variable by 1 and returns the new value.\\n     * @param self The TUint256Slot variable.\\n     * @return res The resulting value after incrementing.\\n     */\\n    function preIncrement(TUint256Slot self) internal returns (uint256 res) {\\n        res = addAssign(self, 1);\\n    }\\n\\n    /**\\n     * @dev Increments the TUint256Slot variable by 1 and returns the original value.\\n     * @param self The TUint256Slot variable.\\n     * @return res The original value before incrementing.\\n     */\\n    function postIncrement(TUint256Slot self) internal returns (uint256 res) {\\n        res = load(self);\\n        store(self, res + 1);\\n    }\\n\\n    /**\\n     * @dev Decrements the TUint256Slot variable by 1 and returns the new value.\\n     * @param self The TUint256Slot variable.\\n     * @return res The resulting value after decrementing.\\n     */\\n    function preDecrement(TUint256Slot self) internal returns (uint256 res) {\\n        res = subAssign(self, 1);\\n    }\\n\\n    /**\\n     * @dev Decrements the TUint256Slot variable by 1 and returns the new value.\\n     * @param self The TUint256Slot variable.\\n     * @return res The resulting value before decrementing.\\n     */\\n    function postDecrement(TUint256Slot self) internal returns (uint256 res) {\\n        res = load(self);\\n        store(self, res - 1);\\n    }\\n\\n    /**\\n     * @dev Adds a given value to the TUint256Slot variable and stores the result.\\n     * @param self The TUint256Slot variable.\\n     * @param other The value to add.\\n     * @return res The resulting value after addition and storage.\\n     */\\n    function addAssign(\\n        TUint256Slot self,\\n        uint256 other\\n    ) internal returns (uint256 res) {\\n        store(self, res = add(self, other));\\n    }\\n\\n    /**\\n     * @dev Subtracts a given value from the TUint256Slot variable and stores the result.\\n     * @param self The TUint256Slot variable.\\n     * @param other The value to subtract.\\n     * @return res The resulting value after subtraction and storage.\\n     */\\n    function subAssign(\\n        TUint256Slot self,\\n        uint256 other\\n    ) internal returns (uint256 res) {\\n        store(self, res = sub(self, other));\\n    }\\n}\\n\",\"keccak256\":\"0xd151f58b6fb215898f4bc23e85ab9f130065b9761b309cc228d2e981d2759340\",\"license\":\"MIT\"}},\"version\":1}",
+  "metadata": {
+    "compiler": {
+      "version": "0.8.21+commit.d9974bed"
+    },
+    "language": "Solidity",
+    "output": {
+      "abi": [],
+      "devdoc": {
+        "kind": "dev",
+        "methods": {},
+        "version": 1
+      },
+      "userdoc": {
+        "kind": "user",
+        "methods": {},
+        "version": 1
+      }
+    },
+    "settings": {
+      "remappings": [
+        "@openzeppelin/=node_modules/@openzeppelin/",
+        "@solit/contracts/=contracts/",
+        "contracts-upgradeable/=node_modules/@openzeppelin/contracts-upgradeable/",
+        "ds-test/=lib/forge-std/lib/ds-test/src/",
+        "eth-gas-reporter/=node_modules/eth-gas-reporter/",
+        "forge-std/=lib/forge-std/src/",
+        "hardhat/=node_modules/hardhat/",
+        "sample-projects/=node_modules/hardhat/sample-projects/",
+        "solady/=node_modules/solady/",
+        "solmate/=node_modules/solmate/"
+      ],
+      "optimizer": {
+        "enabled": true,
+        "runs": 1000000
+      },
+      "metadata": {
+        "useLiteralContent": true,
+        "bytecodeHash": "ipfs"
+      },
+      "compilationTarget": {
+        "contracts/types/libraries/LibTUint256Slot.sol": "LibTUint256Slot"
+      },
+      "libraries": {}
+    },
+    "sources": {
+      "contracts/types/Types.sol": {
+        "keccak256": "0xc798d76e74a9246a6808316ca7047ceb3d818ac6b8d866afb4812732a60cf075",
+        "urls": [],
+        "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.20;\n\nimport {LibTUint256Slot} from \"./libraries/LibTUint256Slot.sol\";\n\ntype TUint256Slot is bytes32;\n\nusing {\n    LibTUint256Slot.add,\n    LibTUint256Slot.sub,\n    LibTUint256Slot.mul,\n    LibTUint256Slot.div,\n    LibTUint256Slot.load,\n    LibTUint256Slot.store,\n    LibTUint256Slot.addAssign,\n    LibTUint256Slot.subAssign,\n    LibTUint256Slot.preDecrement,\n    LibTUint256Slot.postDecrement,\n    LibTUint256Slot.preIncrement,\n    LibTUint256Slot.postIncrement\n} for TUint256Slot global;\n",
+        "license": "MIT"
+      },
+      "contracts/types/libraries/LibTUint256Slot.sol": {
+        "keccak256": "0xd151f58b6fb215898f4bc23e85ab9f130065b9761b309cc228d2e981d2759340",
+        "urls": [],
+        "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.20;\n\nimport {TUint256Slot} from \"../Types.sol\";\n\n/**\n * @title LibTUint256Slot\n * @dev Library for handling unsigned 256-bit integers.\n */\nlibrary LibTUint256Slot {\n    /// @dev value is equal to bytes4(keccak256(\"Panic(uint256)\"))\n    /// @dev see: https://github.com/foundry-rs/forge-std/blob/master/src/StdError.sol\n    uint256 private constant PANIC_ERROR_SIGNATURE = 0x4e487b71;\n    /// @dev error code for {Arithmetic over/underflow} error\n    uint256 private constant ARITHMETIC_ERROR_CODE = 0x11;\n    /// @dev error code for {Division or modulo by 0} error\n    uint256 private constant DIVISION_ERROR_CODE = 0x12;\n\n    /**\n     * @dev Loads the value of the TUint256Slot variable.\n     * @param self The TUint256Slot variable.\n     * @return val The loaded value.\n     */\n    function load(TUint256Slot self) internal view returns (uint256 val) {\n        assembly {\n            val := sload(self)\n        }\n    }\n\n    /**\n     * @dev Stores a value into the TUint256Slot variable.\n     * @param self The TUint256Slot variable.\n     * @param other The value to be stored.\n     */\n    function store(TUint256Slot self, uint256 other) internal {\n        assembly {\n            sstore(self, other)\n        }\n    }\n\n    /**\n     * @dev Multiplies the TUint256Slot variable by a given value.\n     * @param self The TUint256Slot variable.\n     * @param other The value to multiply by.\n     * @return res The resulting value after multiplication.\n     */\n    function mul(\n        TUint256Slot self,\n        uint256 other\n    ) internal view returns (uint256 res) {\n        assembly {\n            let storedVal := sload(self)\n            if iszero(iszero(storedVal)) {\n                res := mul(storedVal, other)\n\n                // Overflow check\n                if iszero(eq(other, div(res, storedVal))) {\n                    // Store 4 bytes the function selector of Panic(uint256)\n                    // Equivalent to revert Panic(uint256)\n                    mstore(0x00, PANIC_ERROR_SIGNATURE)\n                    // Store 4 bytes of division error code in the next slot\n                    mstore(0x20, ARITHMETIC_ERROR_CODE)\n                    // Revert 36 bytes of error starting from 0x1c\n                    revert(0x1c, 0x24)\n                }\n            }\n        }\n    }\n\n    /**\n     * @dev Divides the TUint256Slot variable by a given value.\n     * @param self The TUint256Slot variable.\n     * @param other The value to divide by.\n     * @return res The resulting value after division.\n     */\n    function div(\n        TUint256Slot self,\n        uint256 other\n    ) internal view returns (uint256 res) {\n        assembly {\n            let storedVal := sload(self)\n            // revert if divide by zero\n            if iszero(other) {\n                // Store 4 bytes the function selector of Panic(uint256)\n                // Equivalent to revert Panic(uint256)\n                mstore(0x00, PANIC_ERROR_SIGNATURE)\n                // Store 4 bytes of division error code in the next slot\n                mstore(0x20, DIVISION_ERROR_CODE)\n                // Revert 36 bytes of error starting from 0x1c\n                revert(0x1c, 0x24)\n            }\n            res := div(storedVal, other)\n        }\n    }\n\n    /**\n     * @dev Subtracts a given value from the TUint256Slot variable.\n     * @param self The TUint256Slot variable.\n     * @param other The value to subtract.\n     * @return res The resulting value after subtraction.\n     */\n    function sub(\n        TUint256Slot self,\n        uint256 other\n    ) internal view returns (uint256 res) {\n        assembly {\n            let storedVal := sload(self)\n\n            // Underflow check\n            if lt(storedVal, other) {\n                // Store 4 bytes the function selector of Panic(uint256)\n                // Equivalent to revert Panic(uint256)\n                mstore(0x00, PANIC_ERROR_SIGNATURE)\n                // Store 4 bytes of division error code in the next slot\n                mstore(0x20, ARITHMETIC_ERROR_CODE)\n                // Revert 36 bytes of error starting from 0x1c\n                revert(0x1c, 0x24)\n            }\n\n            res := sub(storedVal, other)\n        }\n    }\n\n    /**\n     * @dev Adds a given value to the TUint256Slot variable.\n     * @param self The TUint256Slot variable.\n     * @param other The value to add.\n     * @return res The resulting value after addition.\n     */\n    function add(\n        TUint256Slot self,\n        uint256 other\n    ) internal view returns (uint256 res) {\n        assembly {\n            let storedVal := sload(self)\n            res := add(storedVal, other)\n\n            // Overflow check\n            if lt(res, other) {\n                // Store 4 bytes the function selector of Panic(uint256)\n                // Equivalent to revert Panic(uint256)\n                mstore(0x00, PANIC_ERROR_SIGNATURE)\n                // Store 4 bytes of division error code in the next slot\n                mstore(0x20, ARITHMETIC_ERROR_CODE)\n                // Revert 36 bytes of error starting from 0x1c\n                revert(0x1c, 0x24)\n            }\n        }\n    }\n\n    /**\n     * @dev Increments the TUint256Slot variable by 1 and returns the new value.\n     * @param self The TUint256Slot variable.\n     * @return res The resulting value after incrementing.\n     */\n    function preIncrement(TUint256Slot self) internal returns (uint256 res) {\n        res = addAssign(self, 1);\n    }\n\n    /**\n     * @dev Increments the TUint256Slot variable by 1 and returns the original value.\n     * @param self The TUint256Slot variable.\n     * @return res The original value before incrementing.\n     */\n    function postIncrement(TUint256Slot self) internal returns (uint256 res) {\n        res = load(self);\n        store(self, res + 1);\n    }\n\n    /**\n     * @dev Decrements the TUint256Slot variable by 1 and returns the new value.\n     * @param self The TUint256Slot variable.\n     * @return res The resulting value after decrementing.\n     */\n    function preDecrement(TUint256Slot self) internal returns (uint256 res) {\n        res = subAssign(self, 1);\n    }\n\n    /**\n     * @dev Decrements the TUint256Slot variable by 1 and returns the new value.\n     * @param self The TUint256Slot variable.\n     * @return res The resulting value before decrementing.\n     */\n    function postDecrement(TUint256Slot self) internal returns (uint256 res) {\n        res = load(self);\n        store(self, res - 1);\n    }\n\n    /**\n     * @dev Adds a given value to the TUint256Slot variable and stores the result.\n     * @param self The TUint256Slot variable.\n     * @param other The value to add.\n     * @return res The resulting value after addition and storage.\n     */\n    function addAssign(\n        TUint256Slot self,\n        uint256 other\n    ) internal returns (uint256 res) {\n        store(self, res = add(self, other));\n    }\n\n    /**\n     * @dev Subtracts a given value from the TUint256Slot variable and stores the result.\n     * @param self The TUint256Slot variable.\n     * @param other The value to subtract.\n     * @return res The resulting value after subtraction and storage.\n     */\n    function subAssign(\n        TUint256Slot self,\n        uint256 other\n    ) internal returns (uint256 res) {\n        store(self, res = sub(self, other));\n    }\n}\n",
+        "license": "MIT"
+      }
+    },
+    "version": 1
+  },
+  "storageLayout": {
+    "storage": [],
+    "types": {}
+  },
+  "userdoc": {
+    "version": 1,
+    "kind": "user"
+  },
+  "devdoc": {
+    "version": 1,
+    "kind": "dev",
+    "details": "Library for handling unsigned 256-bit integers.",
+    "title": "LibTUint256Slot"
+  },
+  "ast": {
+    "absolutePath": "contracts/types/libraries/LibTUint256Slot.sol",
+    "id": 2678,
+    "exportedSymbols": {
+      "LibTUint256Slot": [
+        2677
+      ],
+      "TUint256Slot": [
+        2446
+      ]
+    },
+    "nodeType": "SourceUnit",
+    "src": "32:7303:11",
+    "nodes": [
+      {
+        "id": 2463,
+        "nodeType": "PragmaDirective",
+        "src": "32:24:11",
+        "nodes": [],
+        "literals": [
+          "solidity",
+          "^",
+          "0.8",
+          ".20"
+        ]
+      },
+      {
+        "id": 2465,
+        "nodeType": "ImportDirective",
+        "src": "58:42:11",
+        "nodes": [],
+        "absolutePath": "contracts/types/Types.sol",
+        "file": "../Types.sol",
+        "nameLocation": "-1:-1:-1",
+        "scope": 2678,
+        "sourceUnit": 2462,
+        "symbolAliases": [
+          {
+            "foreign": {
+              "id": 2464,
+              "name": "TUint256Slot",
+              "nodeType": "Identifier",
+              "overloadedDeclarations": [],
+              "referencedDeclaration": 2446,
+              "src": "66:12:11",
+              "typeDescriptions": {}
+            },
+            "nameLocation": "-1:-1:-1"
+          }
+        ],
+        "unitAlias": ""
+      },
+      {
+        "id": 2677,
+        "nodeType": "ContractDefinition",
+        "src": "192:7142:11",
+        "nodes": [
+          {
+            "id": 2470,
+            "nodeType": "VariableDeclaration",
+            "src": "376:59:11",
+            "nodes": [],
+            "constant": true,
+            "documentation": {
+              "id": 2467,
+              "nodeType": "StructuredDocumentation",
+              "src": "222:149:11",
+              "text": "@dev value is equal to bytes4(keccak256(\"Panic(uint256)\"))\n @dev see: https://github.com/foundry-rs/forge-std/blob/master/src/StdError.sol"
+            },
+            "mutability": "constant",
+            "name": "PANIC_ERROR_SIGNATURE",
+            "nameLocation": "401:21:11",
+            "scope": 2677,
+            "stateVariable": true,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_uint256",
+              "typeString": "uint256"
+            },
+            "typeName": {
+              "id": 2468,
+              "name": "uint256",
+              "nodeType": "ElementaryTypeName",
+              "src": "376:7:11",
+              "typeDescriptions": {
+                "typeIdentifier": "t_uint256",
+                "typeString": "uint256"
+              }
+            },
+            "value": {
+              "hexValue": "30783465343837623731",
+              "id": 2469,
+              "isConstant": false,
+              "isLValue": false,
+              "isPure": true,
+              "kind": "number",
+              "lValueRequested": false,
+              "nodeType": "Literal",
+              "src": "425:10:11",
+              "typeDescriptions": {
+                "typeIdentifier": "t_rational_1313373041_by_1",
+                "typeString": "int_const 1313373041"
+              },
+              "value": "0x4e487b71"
+            },
+            "visibility": "private"
+          },
+          {
+            "id": 2474,
+            "nodeType": "VariableDeclaration",
+            "src": "503:53:11",
+            "nodes": [],
+            "constant": true,
+            "documentation": {
+              "id": 2471,
+              "nodeType": "StructuredDocumentation",
+              "src": "441:57:11",
+              "text": "@dev error code for {Arithmetic over/underflow} error"
+            },
+            "mutability": "constant",
+            "name": "ARITHMETIC_ERROR_CODE",
+            "nameLocation": "528:21:11",
+            "scope": 2677,
+            "stateVariable": true,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_uint256",
+              "typeString": "uint256"
+            },
+            "typeName": {
+              "id": 2472,
+              "name": "uint256",
+              "nodeType": "ElementaryTypeName",
+              "src": "503:7:11",
+              "typeDescriptions": {
+                "typeIdentifier": "t_uint256",
+                "typeString": "uint256"
+              }
+            },
+            "value": {
+              "hexValue": "30783131",
+              "id": 2473,
+              "isConstant": false,
+              "isLValue": false,
+              "isPure": true,
+              "kind": "number",
+              "lValueRequested": false,
+              "nodeType": "Literal",
+              "src": "552:4:11",
+              "typeDescriptions": {
+                "typeIdentifier": "t_rational_17_by_1",
+                "typeString": "int_const 17"
+              },
+              "value": "0x11"
+            },
+            "visibility": "private"
+          },
+          {
+            "id": 2478,
+            "nodeType": "VariableDeclaration",
+            "src": "622:51:11",
+            "nodes": [],
+            "constant": true,
+            "documentation": {
+              "id": 2475,
+              "nodeType": "StructuredDocumentation",
+              "src": "562:55:11",
+              "text": "@dev error code for {Division or modulo by 0} error"
+            },
+            "mutability": "constant",
+            "name": "DIVISION_ERROR_CODE",
+            "nameLocation": "647:19:11",
+            "scope": 2677,
+            "stateVariable": true,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_uint256",
+              "typeString": "uint256"
+            },
+            "typeName": {
+              "id": 2476,
+              "name": "uint256",
+              "nodeType": "ElementaryTypeName",
+              "src": "622:7:11",
+              "typeDescriptions": {
+                "typeIdentifier": "t_uint256",
+                "typeString": "uint256"
+              }
+            },
+            "value": {
+              "hexValue": "30783132",
+              "id": 2477,
+              "isConstant": false,
+              "isLValue": false,
+              "isPure": true,
+              "kind": "number",
+              "lValueRequested": false,
+              "nodeType": "Literal",
+              "src": "669:4:11",
+              "typeDescriptions": {
+                "typeIdentifier": "t_rational_18_by_1",
+                "typeString": "int_const 18"
+              },
+              "value": "0x12"
+            },
+            "visibility": "private"
+          },
+          {
+            "id": 2489,
+            "nodeType": "FunctionDefinition",
+            "src": "837:136:11",
+            "nodes": [],
+            "body": {
+              "id": 2488,
+              "nodeType": "Block",
+              "src": "906:67:11",
+              "nodes": [],
+              "statements": [
+                {
+                  "AST": {
+                    "nativeSrc": "925:42:11",
+                    "nodeType": "YulBlock",
+                    "src": "925:42:11",
+                    "statements": [
+                      {
+                        "nativeSrc": "939:18:11",
+                        "nodeType": "YulAssignment",
+                        "src": "939:18:11",
+                        "value": {
+                          "arguments": [
+                            {
+                              "name": "self",
+                              "nativeSrc": "952:4:11",
+                              "nodeType": "YulIdentifier",
+                              "src": "952:4:11"
+                            }
+                          ],
+                          "functionName": {
+                            "name": "sload",
+                            "nativeSrc": "946:5:11",
+                            "nodeType": "YulIdentifier",
+                            "src": "946:5:11"
+                          },
+                          "nativeSrc": "946:11:11",
+                          "nodeType": "YulFunctionCall",
+                          "src": "946:11:11"
+                        },
+                        "variableNames": [
+                          {
+                            "name": "val",
+                            "nativeSrc": "939:3:11",
+                            "nodeType": "YulIdentifier",
+                            "src": "939:3:11"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "evmVersion": "paris",
+                  "externalReferences": [
+                    {
+                      "declaration": 2482,
+                      "isOffset": false,
+                      "isSlot": false,
+                      "src": "952:4:11",
+                      "valueSize": 1
+                    },
+                    {
+                      "declaration": 2485,
+                      "isOffset": false,
+                      "isSlot": false,
+                      "src": "939:3:11",
+                      "valueSize": 1
+                    }
+                  ],
+                  "id": 2487,
+                  "nodeType": "InlineAssembly",
+                  "src": "916:51:11"
+                }
+              ]
+            },
+            "documentation": {
+              "id": 2479,
+              "nodeType": "StructuredDocumentation",
+              "src": "680:152:11",
+              "text": " @dev Loads the value of the TUint256Slot variable.\n @param self The TUint256Slot variable.\n @return val The loaded value."
+            },
+            "implemented": true,
+            "kind": "function",
+            "modifiers": [],
+            "name": "load",
+            "nameLocation": "846:4:11",
+            "parameters": {
+              "id": 2483,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2482,
+                  "mutability": "mutable",
+                  "name": "self",
+                  "nameLocation": "864:4:11",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2489,
+                  "src": "851:17:11",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_userDefinedValueType$_TUint256Slot_$2446",
+                    "typeString": "TUint256Slot"
+                  },
+                  "typeName": {
+                    "id": 2481,
+                    "nodeType": "UserDefinedTypeName",
+                    "pathNode": {
+                      "id": 2480,
+                      "name": "TUint256Slot",
+                      "nameLocations": [
+                        "851:12:11"
+                      ],
+                      "nodeType": "IdentifierPath",
+                      "referencedDeclaration": 2446,
+                      "src": "851:12:11"
+                    },
+                    "referencedDeclaration": 2446,
+                    "src": "851:12:11",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_userDefinedValueType$_TUint256Slot_$2446",
+                      "typeString": "TUint256Slot"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "850:19:11"
+            },
+            "returnParameters": {
+              "id": 2486,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2485,
+                  "mutability": "mutable",
+                  "name": "val",
+                  "nameLocation": "901:3:11",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2489,
+                  "src": "893:11:11",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 2484,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "893:7:11",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "892:13:11"
+            },
+            "scope": 2677,
+            "stateMutability": "view",
+            "virtual": false,
+            "visibility": "internal"
+          },
+          {
+            "id": 2500,
+            "nodeType": "FunctionDefinition",
+            "src": "1144:126:11",
+            "nodes": [],
+            "body": {
+              "id": 2499,
+              "nodeType": "Block",
+              "src": "1202:68:11",
+              "nodes": [],
+              "statements": [
+                {
+                  "AST": {
+                    "nativeSrc": "1221:43:11",
+                    "nodeType": "YulBlock",
+                    "src": "1221:43:11",
+                    "statements": [
+                      {
+                        "expression": {
+                          "arguments": [
+                            {
+                              "name": "self",
+                              "nativeSrc": "1242:4:11",
+                              "nodeType": "YulIdentifier",
+                              "src": "1242:4:11"
+                            },
+                            {
+                              "name": "other",
+                              "nativeSrc": "1248:5:11",
+                              "nodeType": "YulIdentifier",
+                              "src": "1248:5:11"
+                            }
+                          ],
+                          "functionName": {
+                            "name": "sstore",
+                            "nativeSrc": "1235:6:11",
+                            "nodeType": "YulIdentifier",
+                            "src": "1235:6:11"
+                          },
+                          "nativeSrc": "1235:19:11",
+                          "nodeType": "YulFunctionCall",
+                          "src": "1235:19:11"
+                        },
+                        "nativeSrc": "1235:19:11",
+                        "nodeType": "YulExpressionStatement",
+                        "src": "1235:19:11"
+                      }
+                    ]
+                  },
+                  "evmVersion": "paris",
+                  "externalReferences": [
+                    {
+                      "declaration": 2495,
+                      "isOffset": false,
+                      "isSlot": false,
+                      "src": "1248:5:11",
+                      "valueSize": 1
+                    },
+                    {
+                      "declaration": 2493,
+                      "isOffset": false,
+                      "isSlot": false,
+                      "src": "1242:4:11",
+                      "valueSize": 1
+                    }
+                  ],
+                  "id": 2498,
+                  "nodeType": "InlineAssembly",
+                  "src": "1212:52:11"
+                }
+              ]
+            },
+            "documentation": {
+              "id": 2490,
+              "nodeType": "StructuredDocumentation",
+              "src": "979:160:11",
+              "text": " @dev Stores a value into the TUint256Slot variable.\n @param self The TUint256Slot variable.\n @param other The value to be stored."
+            },
+            "implemented": true,
+            "kind": "function",
+            "modifiers": [],
+            "name": "store",
+            "nameLocation": "1153:5:11",
+            "parameters": {
+              "id": 2496,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2493,
+                  "mutability": "mutable",
+                  "name": "self",
+                  "nameLocation": "1172:4:11",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2500,
+                  "src": "1159:17:11",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_userDefinedValueType$_TUint256Slot_$2446",
+                    "typeString": "TUint256Slot"
+                  },
+                  "typeName": {
+                    "id": 2492,
+                    "nodeType": "UserDefinedTypeName",
+                    "pathNode": {
+                      "id": 2491,
+                      "name": "TUint256Slot",
+                      "nameLocations": [
+                        "1159:12:11"
+                      ],
+                      "nodeType": "IdentifierPath",
+                      "referencedDeclaration": 2446,
+                      "src": "1159:12:11"
+                    },
+                    "referencedDeclaration": 2446,
+                    "src": "1159:12:11",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_userDefinedValueType$_TUint256Slot_$2446",
+                      "typeString": "TUint256Slot"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 2495,
+                  "mutability": "mutable",
+                  "name": "other",
+                  "nameLocation": "1186:5:11",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2500,
+                  "src": "1178:13:11",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 2494,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1178:7:11",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "1158:34:11"
+            },
+            "returnParameters": {
+              "id": 2497,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "1202:0:11"
+            },
+            "scope": 2677,
+            "stateMutability": "nonpayable",
+            "virtual": false,
+            "visibility": "internal"
+          },
+          {
+            "id": 2513,
+            "nodeType": "FunctionDefinition",
+            "src": "1512:828:11",
+            "nodes": [],
+            "body": {
+              "id": 2512,
+              "nodeType": "Block",
+              "src": "1617:723:11",
+              "nodes": [],
+              "statements": [
+                {
+                  "AST": {
+                    "nativeSrc": "1636:698:11",
+                    "nodeType": "YulBlock",
+                    "src": "1636:698:11",
+                    "statements": [
+                      {
+                        "nativeSrc": "1650:28:11",
+                        "nodeType": "YulVariableDeclaration",
+                        "src": "1650:28:11",
+                        "value": {
+                          "arguments": [
+                            {
+                              "name": "self",
+                              "nativeSrc": "1673:4:11",
+                              "nodeType": "YulIdentifier",
+                              "src": "1673:4:11"
+                            }
+                          ],
+                          "functionName": {
+                            "name": "sload",
+                            "nativeSrc": "1667:5:11",
+                            "nodeType": "YulIdentifier",
+                            "src": "1667:5:11"
+                          },
+                          "nativeSrc": "1667:11:11",
+                          "nodeType": "YulFunctionCall",
+                          "src": "1667:11:11"
+                        },
+                        "variables": [
+                          {
+                            "name": "storedVal",
+                            "nativeSrc": "1654:9:11",
+                            "nodeType": "YulTypedName",
+                            "src": "1654:9:11",
+                            "type": ""
+                          }
+                        ]
+                      },
+                      {
+                        "body": {
+                          "nativeSrc": "1720:604:11",
+                          "nodeType": "YulBlock",
+                          "src": "1720:604:11",
+                          "statements": [
+                            {
+                              "nativeSrc": "1738:28:11",
+                              "nodeType": "YulAssignment",
+                              "src": "1738:28:11",
+                              "value": {
+                                "arguments": [
+                                  {
+                                    "name": "storedVal",
+                                    "nativeSrc": "1749:9:11",
+                                    "nodeType": "YulIdentifier",
+                                    "src": "1749:9:11"
+                                  },
+                                  {
+                                    "name": "other",
+                                    "nativeSrc": "1760:5:11",
+                                    "nodeType": "YulIdentifier",
+                                    "src": "1760:5:11"
+                                  }
+                                ],
+                                "functionName": {
+                                  "name": "mul",
+                                  "nativeSrc": "1745:3:11",
+                                  "nodeType": "YulIdentifier",
+                                  "src": "1745:3:11"
+                                },
+                                "nativeSrc": "1745:21:11",
+                                "nodeType": "YulFunctionCall",
+                                "src": "1745:21:11"
+                              },
+                              "variableNames": [
+                                {
+                                  "name": "res",
+                                  "nativeSrc": "1738:3:11",
+                                  "nodeType": "YulIdentifier",
+                                  "src": "1738:3:11"
+                                }
+                              ]
+                            },
+                            {
+                              "body": {
+                                "nativeSrc": "1860:450:11",
+                                "nodeType": "YulBlock",
+                                "src": "1860:450:11",
+                                "statements": [
+                                  {
+                                    "expression": {
+                                      "arguments": [
+                                        {
+                                          "kind": "number",
+                                          "nativeSrc": "2025:4:11",
+                                          "nodeType": "YulLiteral",
+                                          "src": "2025:4:11",
+                                          "type": "",
+                                          "value": "0x00"
+                                        },
+                                        {
+                                          "name": "PANIC_ERROR_SIGNATURE",
+                                          "nativeSrc": "2031:21:11",
+                                          "nodeType": "YulIdentifier",
+                                          "src": "2031:21:11"
+                                        }
+                                      ],
+                                      "functionName": {
+                                        "name": "mstore",
+                                        "nativeSrc": "2018:6:11",
+                                        "nodeType": "YulIdentifier",
+                                        "src": "2018:6:11"
+                                      },
+                                      "nativeSrc": "2018:35:11",
+                                      "nodeType": "YulFunctionCall",
+                                      "src": "2018:35:11"
+                                    },
+                                    "nativeSrc": "2018:35:11",
+                                    "nodeType": "YulExpressionStatement",
+                                    "src": "2018:35:11"
+                                  },
+                                  {
+                                    "expression": {
+                                      "arguments": [
+                                        {
+                                          "kind": "number",
+                                          "nativeSrc": "2158:4:11",
+                                          "nodeType": "YulLiteral",
+                                          "src": "2158:4:11",
+                                          "type": "",
+                                          "value": "0x20"
+                                        },
+                                        {
+                                          "name": "ARITHMETIC_ERROR_CODE",
+                                          "nativeSrc": "2164:21:11",
+                                          "nodeType": "YulIdentifier",
+                                          "src": "2164:21:11"
+                                        }
+                                      ],
+                                      "functionName": {
+                                        "name": "mstore",
+                                        "nativeSrc": "2151:6:11",
+                                        "nodeType": "YulIdentifier",
+                                        "src": "2151:6:11"
+                                      },
+                                      "nativeSrc": "2151:35:11",
+                                      "nodeType": "YulFunctionCall",
+                                      "src": "2151:35:11"
+                                    },
+                                    "nativeSrc": "2151:35:11",
+                                    "nodeType": "YulExpressionStatement",
+                                    "src": "2151:35:11"
+                                  },
+                                  {
+                                    "expression": {
+                                      "arguments": [
+                                        {
+                                          "kind": "number",
+                                          "nativeSrc": "2281:4:11",
+                                          "nodeType": "YulLiteral",
+                                          "src": "2281:4:11",
+                                          "type": "",
+                                          "value": "0x1c"
+                                        },
+                                        {
+                                          "kind": "number",
+                                          "nativeSrc": "2287:4:11",
+                                          "nodeType": "YulLiteral",
+                                          "src": "2287:4:11",
+                                          "type": "",
+                                          "value": "0x24"
+                                        }
+                                      ],
+                                      "functionName": {
+                                        "name": "revert",
+                                        "nativeSrc": "2274:6:11",
+                                        "nodeType": "YulIdentifier",
+                                        "src": "2274:6:11"
+                                      },
+                                      "nativeSrc": "2274:18:11",
+                                      "nodeType": "YulFunctionCall",
+                                      "src": "2274:18:11"
+                                    },
+                                    "nativeSrc": "2274:18:11",
+                                    "nodeType": "YulExpressionStatement",
+                                    "src": "2274:18:11"
+                                  }
+                                ]
+                              },
+                              "condition": {
+                                "arguments": [
+                                  {
+                                    "arguments": [
+                                      {
+                                        "name": "other",
+                                        "nativeSrc": "1831:5:11",
+                                        "nodeType": "YulIdentifier",
+                                        "src": "1831:5:11"
+                                      },
+                                      {
+                                        "arguments": [
+                                          {
+                                            "name": "res",
+                                            "nativeSrc": "1842:3:11",
+                                            "nodeType": "YulIdentifier",
+                                            "src": "1842:3:11"
+                                          },
+                                          {
+                                            "name": "storedVal",
+                                            "nativeSrc": "1847:9:11",
+                                            "nodeType": "YulIdentifier",
+                                            "src": "1847:9:11"
+                                          }
+                                        ],
+                                        "functionName": {
+                                          "name": "div",
+                                          "nativeSrc": "1838:3:11",
+                                          "nodeType": "YulIdentifier",
+                                          "src": "1838:3:11"
+                                        },
+                                        "nativeSrc": "1838:19:11",
+                                        "nodeType": "YulFunctionCall",
+                                        "src": "1838:19:11"
+                                      }
+                                    ],
+                                    "functionName": {
+                                      "name": "eq",
+                                      "nativeSrc": "1828:2:11",
+                                      "nodeType": "YulIdentifier",
+                                      "src": "1828:2:11"
+                                    },
+                                    "nativeSrc": "1828:30:11",
+                                    "nodeType": "YulFunctionCall",
+                                    "src": "1828:30:11"
+                                  }
+                                ],
+                                "functionName": {
+                                  "name": "iszero",
+                                  "nativeSrc": "1821:6:11",
+                                  "nodeType": "YulIdentifier",
+                                  "src": "1821:6:11"
+                                },
+                                "nativeSrc": "1821:38:11",
+                                "nodeType": "YulFunctionCall",
+                                "src": "1821:38:11"
+                              },
+                              "nativeSrc": "1818:492:11",
+                              "nodeType": "YulIf",
+                              "src": "1818:492:11"
+                            }
+                          ]
+                        },
+                        "condition": {
+                          "arguments": [
+                            {
+                              "arguments": [
+                                {
+                                  "name": "storedVal",
+                                  "nativeSrc": "1708:9:11",
+                                  "nodeType": "YulIdentifier",
+                                  "src": "1708:9:11"
+                                }
+                              ],
+                              "functionName": {
+                                "name": "iszero",
+                                "nativeSrc": "1701:6:11",
+                                "nodeType": "YulIdentifier",
+                                "src": "1701:6:11"
+                              },
+                              "nativeSrc": "1701:17:11",
+                              "nodeType": "YulFunctionCall",
+                              "src": "1701:17:11"
+                            }
+                          ],
+                          "functionName": {
+                            "name": "iszero",
+                            "nativeSrc": "1694:6:11",
+                            "nodeType": "YulIdentifier",
+                            "src": "1694:6:11"
+                          },
+                          "nativeSrc": "1694:25:11",
+                          "nodeType": "YulFunctionCall",
+                          "src": "1694:25:11"
+                        },
+                        "nativeSrc": "1691:633:11",
+                        "nodeType": "YulIf",
+                        "src": "1691:633:11"
+                      }
+                    ]
+                  },
+                  "evmVersion": "paris",
+                  "externalReferences": [
+                    {
+                      "declaration": 2474,
+                      "isOffset": false,
+                      "isSlot": false,
+                      "src": "2164:21:11",
+                      "valueSize": 1
+                    },
+                    {
+                      "declaration": 2470,
+                      "isOffset": false,
+                      "isSlot": false,
+                      "src": "2031:21:11",
+                      "valueSize": 1
+                    },
+                    {
+                      "declaration": 2506,
+                      "isOffset": false,
+                      "isSlot": false,
+                      "src": "1760:5:11",
+                      "valueSize": 1
+                    },
+                    {
+                      "declaration": 2506,
+                      "isOffset": false,
+                      "isSlot": false,
+                      "src": "1831:5:11",
+                      "valueSize": 1
+                    },
+                    {
+                      "declaration": 2509,
+                      "isOffset": false,
+                      "isSlot": false,
+                      "src": "1738:3:11",
+                      "valueSize": 1
+                    },
+                    {
+                      "declaration": 2509,
+                      "isOffset": false,
+                      "isSlot": false,
+                      "src": "1842:3:11",
+                      "valueSize": 1
+                    },
+                    {
+                      "declaration": 2504,
+                      "isOffset": false,
+                      "isSlot": false,
+                      "src": "1673:4:11",
+                      "valueSize": 1
+                    }
+                  ],
+                  "id": 2511,
+                  "nodeType": "InlineAssembly",
+                  "src": "1627:707:11"
+                }
+              ]
+            },
+            "documentation": {
+              "id": 2501,
+              "nodeType": "StructuredDocumentation",
+              "src": "1276:231:11",
+              "text": " @dev Multiplies the TUint256Slot variable by a given value.\n @param self The TUint256Slot variable.\n @param other The value to multiply by.\n @return res The resulting value after multiplication."
+            },
+            "implemented": true,
+            "kind": "function",
+            "modifiers": [],
+            "name": "mul",
+            "nameLocation": "1521:3:11",
+            "parameters": {
+              "id": 2507,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2504,
+                  "mutability": "mutable",
+                  "name": "self",
+                  "nameLocation": "1547:4:11",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2513,
+                  "src": "1534:17:11",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_userDefinedValueType$_TUint256Slot_$2446",
+                    "typeString": "TUint256Slot"
+                  },
+                  "typeName": {
+                    "id": 2503,
+                    "nodeType": "UserDefinedTypeName",
+                    "pathNode": {
+                      "id": 2502,
+                      "name": "TUint256Slot",
+                      "nameLocations": [
+                        "1534:12:11"
+                      ],
+                      "nodeType": "IdentifierPath",
+                      "referencedDeclaration": 2446,
+                      "src": "1534:12:11"
+                    },
+                    "referencedDeclaration": 2446,
+                    "src": "1534:12:11",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_userDefinedValueType$_TUint256Slot_$2446",
+                      "typeString": "TUint256Slot"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 2506,
+                  "mutability": "mutable",
+                  "name": "other",
+                  "nameLocation": "1569:5:11",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2513,
+                  "src": "1561:13:11",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 2505,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1561:7:11",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "1524:56:11"
+            },
+            "returnParameters": {
+              "id": 2510,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2509,
+                  "mutability": "mutable",
+                  "name": "res",
+                  "nameLocation": "1612:3:11",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2513,
+                  "src": "1604:11:11",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 2508,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1604:7:11",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "1603:13:11"
+            },
+            "scope": 2677,
+            "stateMutability": "view",
+            "virtual": false,
+            "visibility": "internal"
+          },
+          {
+            "id": 2526,
+            "nodeType": "FunctionDefinition",
+            "src": "2571:709:11",
+            "nodes": [],
+            "body": {
+              "id": 2525,
+              "nodeType": "Block",
+              "src": "2676:604:11",
+              "nodes": [],
+              "statements": [
+                {
+                  "AST": {
+                    "nativeSrc": "2695:579:11",
+                    "nodeType": "YulBlock",
+                    "src": "2695:579:11",
+                    "statements": [
+                      {
+                        "nativeSrc": "2709:28:11",
+                        "nodeType": "YulVariableDeclaration",
+                        "src": "2709:28:11",
+                        "value": {
+                          "arguments": [
+                            {
+                              "name": "self",
+                              "nativeSrc": "2732:4:11",
+                              "nodeType": "YulIdentifier",
+                              "src": "2732:4:11"
+                            }
+                          ],
+                          "functionName": {
+                            "name": "sload",
+                            "nativeSrc": "2726:5:11",
+                            "nodeType": "YulIdentifier",
+                            "src": "2726:5:11"
+                          },
+                          "nativeSrc": "2726:11:11",
+                          "nodeType": "YulFunctionCall",
+                          "src": "2726:11:11"
+                        },
+                        "variables": [
+                          {
+                            "name": "storedVal",
+                            "nativeSrc": "2713:9:11",
+                            "nodeType": "YulTypedName",
+                            "src": "2713:9:11",
+                            "type": ""
+                          }
+                        ]
+                      },
+                      {
+                        "body": {
+                          "nativeSrc": "2807:416:11",
+                          "nodeType": "YulBlock",
+                          "src": "2807:416:11",
+                          "statements": [
+                            {
+                              "expression": {
+                                "arguments": [
+                                  {
+                                    "kind": "number",
+                                    "nativeSrc": "2960:4:11",
+                                    "nodeType": "YulLiteral",
+                                    "src": "2960:4:11",
+                                    "type": "",
+                                    "value": "0x00"
+                                  },
+                                  {
+                                    "name": "PANIC_ERROR_SIGNATURE",
+                                    "nativeSrc": "2966:21:11",
+                                    "nodeType": "YulIdentifier",
+                                    "src": "2966:21:11"
+                                  }
+                                ],
+                                "functionName": {
+                                  "name": "mstore",
+                                  "nativeSrc": "2953:6:11",
+                                  "nodeType": "YulIdentifier",
+                                  "src": "2953:6:11"
+                                },
+                                "nativeSrc": "2953:35:11",
+                                "nodeType": "YulFunctionCall",
+                                "src": "2953:35:11"
+                              },
+                              "nativeSrc": "2953:35:11",
+                              "nodeType": "YulExpressionStatement",
+                              "src": "2953:35:11"
+                            },
+                            {
+                              "expression": {
+                                "arguments": [
+                                  {
+                                    "kind": "number",
+                                    "nativeSrc": "3085:4:11",
+                                    "nodeType": "YulLiteral",
+                                    "src": "3085:4:11",
+                                    "type": "",
+                                    "value": "0x20"
+                                  },
+                                  {
+                                    "name": "DIVISION_ERROR_CODE",
+                                    "nativeSrc": "3091:19:11",
+                                    "nodeType": "YulIdentifier",
+                                    "src": "3091:19:11"
+                                  }
+                                ],
+                                "functionName": {
+                                  "name": "mstore",
+                                  "nativeSrc": "3078:6:11",
+                                  "nodeType": "YulIdentifier",
+                                  "src": "3078:6:11"
+                                },
+                                "nativeSrc": "3078:33:11",
+                                "nodeType": "YulFunctionCall",
+                                "src": "3078:33:11"
+                              },
+                              "nativeSrc": "3078:33:11",
+                              "nodeType": "YulExpressionStatement",
+                              "src": "3078:33:11"
+                            },
+                            {
+                              "expression": {
+                                "arguments": [
+                                  {
+                                    "kind": "number",
+                                    "nativeSrc": "3198:4:11",
+                                    "nodeType": "YulLiteral",
+                                    "src": "3198:4:11",
+                                    "type": "",
+                                    "value": "0x1c"
+                                  },
+                                  {
+                                    "kind": "number",
+                                    "nativeSrc": "3204:4:11",
+                                    "nodeType": "YulLiteral",
+                                    "src": "3204:4:11",
+                                    "type": "",
+                                    "value": "0x24"
+                                  }
+                                ],
+                                "functionName": {
+                                  "name": "revert",
+                                  "nativeSrc": "3191:6:11",
+                                  "nodeType": "YulIdentifier",
+                                  "src": "3191:6:11"
+                                },
+                                "nativeSrc": "3191:18:11",
+                                "nodeType": "YulFunctionCall",
+                                "src": "3191:18:11"
+                              },
+                              "nativeSrc": "3191:18:11",
+                              "nodeType": "YulExpressionStatement",
+                              "src": "3191:18:11"
+                            }
+                          ]
+                        },
+                        "condition": {
+                          "arguments": [
+                            {
+                              "name": "other",
+                              "nativeSrc": "2800:5:11",
+                              "nodeType": "YulIdentifier",
+                              "src": "2800:5:11"
+                            }
+                          ],
+                          "functionName": {
+                            "name": "iszero",
+                            "nativeSrc": "2793:6:11",
+                            "nodeType": "YulIdentifier",
+                            "src": "2793:6:11"
+                          },
+                          "nativeSrc": "2793:13:11",
+                          "nodeType": "YulFunctionCall",
+                          "src": "2793:13:11"
+                        },
+                        "nativeSrc": "2790:433:11",
+                        "nodeType": "YulIf",
+                        "src": "2790:433:11"
+                      },
+                      {
+                        "nativeSrc": "3236:28:11",
+                        "nodeType": "YulAssignment",
+                        "src": "3236:28:11",
+                        "value": {
+                          "arguments": [
+                            {
+                              "name": "storedVal",
+                              "nativeSrc": "3247:9:11",
+                              "nodeType": "YulIdentifier",
+                              "src": "3247:9:11"
+                            },
+                            {
+                              "name": "other",
+                              "nativeSrc": "3258:5:11",
+                              "nodeType": "YulIdentifier",
+                              "src": "3258:5:11"
+                            }
+                          ],
+                          "functionName": {
+                            "name": "div",
+                            "nativeSrc": "3243:3:11",
+                            "nodeType": "YulIdentifier",
+                            "src": "3243:3:11"
+                          },
+                          "nativeSrc": "3243:21:11",
+                          "nodeType": "YulFunctionCall",
+                          "src": "3243:21:11"
+                        },
+                        "variableNames": [
+                          {
+                            "name": "res",
+                            "nativeSrc": "3236:3:11",
+                            "nodeType": "YulIdentifier",
+                            "src": "3236:3:11"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "evmVersion": "paris",
+                  "externalReferences": [
+                    {
+                      "declaration": 2478,
+                      "isOffset": false,
+                      "isSlot": false,
+                      "src": "3091:19:11",
+                      "valueSize": 1
+                    },
+                    {
+                      "declaration": 2470,
+                      "isOffset": false,
+                      "isSlot": false,
+                      "src": "2966:21:11",
+                      "valueSize": 1
+                    },
+                    {
+                      "declaration": 2519,
+                      "isOffset": false,
+                      "isSlot": false,
+                      "src": "2800:5:11",
+                      "valueSize": 1
+                    },
+                    {
+                      "declaration": 2519,
+                      "isOffset": false,
+                      "isSlot": false,
+                      "src": "3258:5:11",
+                      "valueSize": 1
+                    },
+                    {
+                      "declaration": 2522,
+                      "isOffset": false,
+                      "isSlot": false,
+                      "src": "3236:3:11",
+                      "valueSize": 1
+                    },
+                    {
+                      "declaration": 2517,
+                      "isOffset": false,
+                      "isSlot": false,
+                      "src": "2732:4:11",
+                      "valueSize": 1
+                    }
+                  ],
+                  "id": 2524,
+                  "nodeType": "InlineAssembly",
+                  "src": "2686:588:11"
+                }
+              ]
+            },
+            "documentation": {
+              "id": 2514,
+              "nodeType": "StructuredDocumentation",
+              "src": "2346:220:11",
+              "text": " @dev Divides the TUint256Slot variable by a given value.\n @param self The TUint256Slot variable.\n @param other The value to divide by.\n @return res The resulting value after division."
+            },
+            "implemented": true,
+            "kind": "function",
+            "modifiers": [],
+            "name": "div",
+            "nameLocation": "2580:3:11",
+            "parameters": {
+              "id": 2520,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2517,
+                  "mutability": "mutable",
+                  "name": "self",
+                  "nameLocation": "2606:4:11",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2526,
+                  "src": "2593:17:11",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_userDefinedValueType$_TUint256Slot_$2446",
+                    "typeString": "TUint256Slot"
+                  },
+                  "typeName": {
+                    "id": 2516,
+                    "nodeType": "UserDefinedTypeName",
+                    "pathNode": {
+                      "id": 2515,
+                      "name": "TUint256Slot",
+                      "nameLocations": [
+                        "2593:12:11"
+                      ],
+                      "nodeType": "IdentifierPath",
+                      "referencedDeclaration": 2446,
+                      "src": "2593:12:11"
+                    },
+                    "referencedDeclaration": 2446,
+                    "src": "2593:12:11",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_userDefinedValueType$_TUint256Slot_$2446",
+                      "typeString": "TUint256Slot"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 2519,
+                  "mutability": "mutable",
+                  "name": "other",
+                  "nameLocation": "2628:5:11",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2526,
+                  "src": "2620:13:11",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 2518,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "2620:7:11",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "2583:56:11"
+            },
+            "returnParameters": {
+              "id": 2523,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2522,
+                  "mutability": "mutable",
+                  "name": "res",
+                  "nameLocation": "2671:3:11",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2526,
+                  "src": "2663:11:11",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 2521,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "2663:7:11",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "2662:13:11"
+            },
+            "scope": 2677,
+            "stateMutability": "view",
+            "virtual": false,
+            "visibility": "internal"
+          },
+          {
+            "id": 2539,
+            "nodeType": "FunctionDefinition",
+            "src": "3517:711:11",
+            "nodes": [],
+            "body": {
+              "id": 2538,
+              "nodeType": "Block",
+              "src": "3622:606:11",
+              "nodes": [],
+              "statements": [
+                {
+                  "AST": {
+                    "nativeSrc": "3641:581:11",
+                    "nodeType": "YulBlock",
+                    "src": "3641:581:11",
+                    "statements": [
+                      {
+                        "nativeSrc": "3655:28:11",
+                        "nodeType": "YulVariableDeclaration",
+                        "src": "3655:28:11",
+                        "value": {
+                          "arguments": [
+                            {
+                              "name": "self",
+                              "nativeSrc": "3678:4:11",
+                              "nodeType": "YulIdentifier",
+                              "src": "3678:4:11"
+                            }
+                          ],
+                          "functionName": {
+                            "name": "sload",
+                            "nativeSrc": "3672:5:11",
+                            "nodeType": "YulIdentifier",
+                            "src": "3672:5:11"
+                          },
+                          "nativeSrc": "3672:11:11",
+                          "nodeType": "YulFunctionCall",
+                          "src": "3672:11:11"
+                        },
+                        "variables": [
+                          {
+                            "name": "storedVal",
+                            "nativeSrc": "3659:9:11",
+                            "nodeType": "YulTypedName",
+                            "src": "3659:9:11",
+                            "type": ""
+                          }
+                        ]
+                      },
+                      {
+                        "body": {
+                          "nativeSrc": "3752:418:11",
+                          "nodeType": "YulBlock",
+                          "src": "3752:418:11",
+                          "statements": [
+                            {
+                              "expression": {
+                                "arguments": [
+                                  {
+                                    "kind": "number",
+                                    "nativeSrc": "3905:4:11",
+                                    "nodeType": "YulLiteral",
+                                    "src": "3905:4:11",
+                                    "type": "",
+                                    "value": "0x00"
+                                  },
+                                  {
+                                    "name": "PANIC_ERROR_SIGNATURE",
+                                    "nativeSrc": "3911:21:11",
+                                    "nodeType": "YulIdentifier",
+                                    "src": "3911:21:11"
+                                  }
+                                ],
+                                "functionName": {
+                                  "name": "mstore",
+                                  "nativeSrc": "3898:6:11",
+                                  "nodeType": "YulIdentifier",
+                                  "src": "3898:6:11"
+                                },
+                                "nativeSrc": "3898:35:11",
+                                "nodeType": "YulFunctionCall",
+                                "src": "3898:35:11"
+                              },
+                              "nativeSrc": "3898:35:11",
+                              "nodeType": "YulExpressionStatement",
+                              "src": "3898:35:11"
+                            },
+                            {
+                              "expression": {
+                                "arguments": [
+                                  {
+                                    "kind": "number",
+                                    "nativeSrc": "4030:4:11",
+                                    "nodeType": "YulLiteral",
+                                    "src": "4030:4:11",
+                                    "type": "",
+                                    "value": "0x20"
+                                  },
+                                  {
+                                    "name": "ARITHMETIC_ERROR_CODE",
+                                    "nativeSrc": "4036:21:11",
+                                    "nodeType": "YulIdentifier",
+                                    "src": "4036:21:11"
+                                  }
+                                ],
+                                "functionName": {
+                                  "name": "mstore",
+                                  "nativeSrc": "4023:6:11",
+                                  "nodeType": "YulIdentifier",
+                                  "src": "4023:6:11"
+                                },
+                                "nativeSrc": "4023:35:11",
+                                "nodeType": "YulFunctionCall",
+                                "src": "4023:35:11"
+                              },
+                              "nativeSrc": "4023:35:11",
+                              "nodeType": "YulExpressionStatement",
+                              "src": "4023:35:11"
+                            },
+                            {
+                              "expression": {
+                                "arguments": [
+                                  {
+                                    "kind": "number",
+                                    "nativeSrc": "4145:4:11",
+                                    "nodeType": "YulLiteral",
+                                    "src": "4145:4:11",
+                                    "type": "",
+                                    "value": "0x1c"
+                                  },
+                                  {
+                                    "kind": "number",
+                                    "nativeSrc": "4151:4:11",
+                                    "nodeType": "YulLiteral",
+                                    "src": "4151:4:11",
+                                    "type": "",
+                                    "value": "0x24"
+                                  }
+                                ],
+                                "functionName": {
+                                  "name": "revert",
+                                  "nativeSrc": "4138:6:11",
+                                  "nodeType": "YulIdentifier",
+                                  "src": "4138:6:11"
+                                },
+                                "nativeSrc": "4138:18:11",
+                                "nodeType": "YulFunctionCall",
+                                "src": "4138:18:11"
+                              },
+                              "nativeSrc": "4138:18:11",
+                              "nodeType": "YulExpressionStatement",
+                              "src": "4138:18:11"
+                            }
+                          ]
+                        },
+                        "condition": {
+                          "arguments": [
+                            {
+                              "name": "storedVal",
+                              "nativeSrc": "3734:9:11",
+                              "nodeType": "YulIdentifier",
+                              "src": "3734:9:11"
+                            },
+                            {
+                              "name": "other",
+                              "nativeSrc": "3745:5:11",
+                              "nodeType": "YulIdentifier",
+                              "src": "3745:5:11"
+                            }
+                          ],
+                          "functionName": {
+                            "name": "lt",
+                            "nativeSrc": "3731:2:11",
+                            "nodeType": "YulIdentifier",
+                            "src": "3731:2:11"
+                          },
+                          "nativeSrc": "3731:20:11",
+                          "nodeType": "YulFunctionCall",
+                          "src": "3731:20:11"
+                        },
+                        "nativeSrc": "3728:442:11",
+                        "nodeType": "YulIf",
+                        "src": "3728:442:11"
+                      },
+                      {
+                        "nativeSrc": "4184:28:11",
+                        "nodeType": "YulAssignment",
+                        "src": "4184:28:11",
+                        "value": {
+                          "arguments": [
+                            {
+                              "name": "storedVal",
+                              "nativeSrc": "4195:9:11",
+                              "nodeType": "YulIdentifier",
+                              "src": "4195:9:11"
+                            },
+                            {
+                              "name": "other",
+                              "nativeSrc": "4206:5:11",
+                              "nodeType": "YulIdentifier",
+                              "src": "4206:5:11"
+                            }
+                          ],
+                          "functionName": {
+                            "name": "sub",
+                            "nativeSrc": "4191:3:11",
+                            "nodeType": "YulIdentifier",
+                            "src": "4191:3:11"
+                          },
+                          "nativeSrc": "4191:21:11",
+                          "nodeType": "YulFunctionCall",
+                          "src": "4191:21:11"
+                        },
+                        "variableNames": [
+                          {
+                            "name": "res",
+                            "nativeSrc": "4184:3:11",
+                            "nodeType": "YulIdentifier",
+                            "src": "4184:3:11"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "evmVersion": "paris",
+                  "externalReferences": [
+                    {
+                      "declaration": 2474,
+                      "isOffset": false,
+                      "isSlot": false,
+                      "src": "4036:21:11",
+                      "valueSize": 1
+                    },
+                    {
+                      "declaration": 2470,
+                      "isOffset": false,
+                      "isSlot": false,
+                      "src": "3911:21:11",
+                      "valueSize": 1
+                    },
+                    {
+                      "declaration": 2532,
+                      "isOffset": false,
+                      "isSlot": false,
+                      "src": "3745:5:11",
+                      "valueSize": 1
+                    },
+                    {
+                      "declaration": 2532,
+                      "isOffset": false,
+                      "isSlot": false,
+                      "src": "4206:5:11",
+                      "valueSize": 1
+                    },
+                    {
+                      "declaration": 2535,
+                      "isOffset": false,
+                      "isSlot": false,
+                      "src": "4184:3:11",
+                      "valueSize": 1
+                    },
+                    {
+                      "declaration": 2530,
+                      "isOffset": false,
+                      "isSlot": false,
+                      "src": "3678:4:11",
+                      "valueSize": 1
+                    }
+                  ],
+                  "id": 2537,
+                  "nodeType": "InlineAssembly",
+                  "src": "3632:590:11"
+                }
+              ]
+            },
+            "documentation": {
+              "id": 2527,
+              "nodeType": "StructuredDocumentation",
+              "src": "3286:226:11",
+              "text": " @dev Subtracts a given value from the TUint256Slot variable.\n @param self The TUint256Slot variable.\n @param other The value to subtract.\n @return res The resulting value after subtraction."
+            },
+            "implemented": true,
+            "kind": "function",
+            "modifiers": [],
+            "name": "sub",
+            "nameLocation": "3526:3:11",
+            "parameters": {
+              "id": 2533,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2530,
+                  "mutability": "mutable",
+                  "name": "self",
+                  "nameLocation": "3552:4:11",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2539,
+                  "src": "3539:17:11",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_userDefinedValueType$_TUint256Slot_$2446",
+                    "typeString": "TUint256Slot"
+                  },
+                  "typeName": {
+                    "id": 2529,
+                    "nodeType": "UserDefinedTypeName",
+                    "pathNode": {
+                      "id": 2528,
+                      "name": "TUint256Slot",
+                      "nameLocations": [
+                        "3539:12:11"
+                      ],
+                      "nodeType": "IdentifierPath",
+                      "referencedDeclaration": 2446,
+                      "src": "3539:12:11"
+                    },
+                    "referencedDeclaration": 2446,
+                    "src": "3539:12:11",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_userDefinedValueType$_TUint256Slot_$2446",
+                      "typeString": "TUint256Slot"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 2532,
+                  "mutability": "mutable",
+                  "name": "other",
+                  "nameLocation": "3574:5:11",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2539,
+                  "src": "3566:13:11",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 2531,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "3566:7:11",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "3529:56:11"
+            },
+            "returnParameters": {
+              "id": 2536,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2535,
+                  "mutability": "mutable",
+                  "name": "res",
+                  "nameLocation": "3617:3:11",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2539,
+                  "src": "3609:11:11",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 2534,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "3609:7:11",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "3608:13:11"
+            },
+            "scope": 2677,
+            "stateMutability": "view",
+            "virtual": false,
+            "visibility": "internal"
+          },
+          {
+            "id": 2552,
+            "nodeType": "FunctionDefinition",
+            "src": "4450:703:11",
+            "nodes": [],
+            "body": {
+              "id": 2551,
+              "nodeType": "Block",
+              "src": "4555:598:11",
+              "nodes": [],
+              "statements": [
+                {
+                  "AST": {
+                    "nativeSrc": "4574:573:11",
+                    "nodeType": "YulBlock",
+                    "src": "4574:573:11",
+                    "statements": [
+                      {
+                        "nativeSrc": "4588:28:11",
+                        "nodeType": "YulVariableDeclaration",
+                        "src": "4588:28:11",
+                        "value": {
+                          "arguments": [
+                            {
+                              "name": "self",
+                              "nativeSrc": "4611:4:11",
+                              "nodeType": "YulIdentifier",
+                              "src": "4611:4:11"
+                            }
+                          ],
+                          "functionName": {
+                            "name": "sload",
+                            "nativeSrc": "4605:5:11",
+                            "nodeType": "YulIdentifier",
+                            "src": "4605:5:11"
+                          },
+                          "nativeSrc": "4605:11:11",
+                          "nodeType": "YulFunctionCall",
+                          "src": "4605:11:11"
+                        },
+                        "variables": [
+                          {
+                            "name": "storedVal",
+                            "nativeSrc": "4592:9:11",
+                            "nodeType": "YulTypedName",
+                            "src": "4592:9:11",
+                            "type": ""
+                          }
+                        ]
+                      },
+                      {
+                        "nativeSrc": "4629:28:11",
+                        "nodeType": "YulAssignment",
+                        "src": "4629:28:11",
+                        "value": {
+                          "arguments": [
+                            {
+                              "name": "storedVal",
+                              "nativeSrc": "4640:9:11",
+                              "nodeType": "YulIdentifier",
+                              "src": "4640:9:11"
+                            },
+                            {
+                              "name": "other",
+                              "nativeSrc": "4651:5:11",
+                              "nodeType": "YulIdentifier",
+                              "src": "4651:5:11"
+                            }
+                          ],
+                          "functionName": {
+                            "name": "add",
+                            "nativeSrc": "4636:3:11",
+                            "nodeType": "YulIdentifier",
+                            "src": "4636:3:11"
+                          },
+                          "nativeSrc": "4636:21:11",
+                          "nodeType": "YulFunctionCall",
+                          "src": "4636:21:11"
+                        },
+                        "variableNames": [
+                          {
+                            "name": "res",
+                            "nativeSrc": "4629:3:11",
+                            "nodeType": "YulIdentifier",
+                            "src": "4629:3:11"
+                          }
+                        ]
+                      },
+                      {
+                        "body": {
+                          "nativeSrc": "4719:418:11",
+                          "nodeType": "YulBlock",
+                          "src": "4719:418:11",
+                          "statements": [
+                            {
+                              "expression": {
+                                "arguments": [
+                                  {
+                                    "kind": "number",
+                                    "nativeSrc": "4872:4:11",
+                                    "nodeType": "YulLiteral",
+                                    "src": "4872:4:11",
+                                    "type": "",
+                                    "value": "0x00"
+                                  },
+                                  {
+                                    "name": "PANIC_ERROR_SIGNATURE",
+                                    "nativeSrc": "4878:21:11",
+                                    "nodeType": "YulIdentifier",
+                                    "src": "4878:21:11"
+                                  }
+                                ],
+                                "functionName": {
+                                  "name": "mstore",
+                                  "nativeSrc": "4865:6:11",
+                                  "nodeType": "YulIdentifier",
+                                  "src": "4865:6:11"
+                                },
+                                "nativeSrc": "4865:35:11",
+                                "nodeType": "YulFunctionCall",
+                                "src": "4865:35:11"
+                              },
+                              "nativeSrc": "4865:35:11",
+                              "nodeType": "YulExpressionStatement",
+                              "src": "4865:35:11"
+                            },
+                            {
+                              "expression": {
+                                "arguments": [
+                                  {
+                                    "kind": "number",
+                                    "nativeSrc": "4997:4:11",
+                                    "nodeType": "YulLiteral",
+                                    "src": "4997:4:11",
+                                    "type": "",
+                                    "value": "0x20"
+                                  },
+                                  {
+                                    "name": "ARITHMETIC_ERROR_CODE",
+                                    "nativeSrc": "5003:21:11",
+                                    "nodeType": "YulIdentifier",
+                                    "src": "5003:21:11"
+                                  }
+                                ],
+                                "functionName": {
+                                  "name": "mstore",
+                                  "nativeSrc": "4990:6:11",
+                                  "nodeType": "YulIdentifier",
+                                  "src": "4990:6:11"
+                                },
+                                "nativeSrc": "4990:35:11",
+                                "nodeType": "YulFunctionCall",
+                                "src": "4990:35:11"
+                              },
+                              "nativeSrc": "4990:35:11",
+                              "nodeType": "YulExpressionStatement",
+                              "src": "4990:35:11"
+                            },
+                            {
+                              "expression": {
+                                "arguments": [
+                                  {
+                                    "kind": "number",
+                                    "nativeSrc": "5112:4:11",
+                                    "nodeType": "YulLiteral",
+                                    "src": "5112:4:11",
+                                    "type": "",
+                                    "value": "0x1c"
+                                  },
+                                  {
+                                    "kind": "number",
+                                    "nativeSrc": "5118:4:11",
+                                    "nodeType": "YulLiteral",
+                                    "src": "5118:4:11",
+                                    "type": "",
+                                    "value": "0x24"
+                                  }
+                                ],
+                                "functionName": {
+                                  "name": "revert",
+                                  "nativeSrc": "5105:6:11",
+                                  "nodeType": "YulIdentifier",
+                                  "src": "5105:6:11"
+                                },
+                                "nativeSrc": "5105:18:11",
+                                "nodeType": "YulFunctionCall",
+                                "src": "5105:18:11"
+                              },
+                              "nativeSrc": "5105:18:11",
+                              "nodeType": "YulExpressionStatement",
+                              "src": "5105:18:11"
+                            }
+                          ]
+                        },
+                        "condition": {
+                          "arguments": [
+                            {
+                              "name": "res",
+                              "nativeSrc": "4707:3:11",
+                              "nodeType": "YulIdentifier",
+                              "src": "4707:3:11"
+                            },
+                            {
+                              "name": "other",
+                              "nativeSrc": "4712:5:11",
+                              "nodeType": "YulIdentifier",
+                              "src": "4712:5:11"
+                            }
+                          ],
+                          "functionName": {
+                            "name": "lt",
+                            "nativeSrc": "4704:2:11",
+                            "nodeType": "YulIdentifier",
+                            "src": "4704:2:11"
+                          },
+                          "nativeSrc": "4704:14:11",
+                          "nodeType": "YulFunctionCall",
+                          "src": "4704:14:11"
+                        },
+                        "nativeSrc": "4701:436:11",
+                        "nodeType": "YulIf",
+                        "src": "4701:436:11"
+                      }
+                    ]
+                  },
+                  "evmVersion": "paris",
+                  "externalReferences": [
+                    {
+                      "declaration": 2474,
+                      "isOffset": false,
+                      "isSlot": false,
+                      "src": "5003:21:11",
+                      "valueSize": 1
+                    },
+                    {
+                      "declaration": 2470,
+                      "isOffset": false,
+                      "isSlot": false,
+                      "src": "4878:21:11",
+                      "valueSize": 1
+                    },
+                    {
+                      "declaration": 2545,
+                      "isOffset": false,
+                      "isSlot": false,
+                      "src": "4651:5:11",
+                      "valueSize": 1
+                    },
+                    {
+                      "declaration": 2545,
+                      "isOffset": false,
+                      "isSlot": false,
+                      "src": "4712:5:11",
+                      "valueSize": 1
+                    },
+                    {
+                      "declaration": 2548,
+                      "isOffset": false,
+                      "isSlot": false,
+                      "src": "4629:3:11",
+                      "valueSize": 1
+                    },
+                    {
+                      "declaration": 2548,
+                      "isOffset": false,
+                      "isSlot": false,
+                      "src": "4707:3:11",
+                      "valueSize": 1
+                    },
+                    {
+                      "declaration": 2543,
+                      "isOffset": false,
+                      "isSlot": false,
+                      "src": "4611:4:11",
+                      "valueSize": 1
+                    }
+                  ],
+                  "id": 2550,
+                  "nodeType": "InlineAssembly",
+                  "src": "4565:582:11"
+                }
+              ]
+            },
+            "documentation": {
+              "id": 2540,
+              "nodeType": "StructuredDocumentation",
+              "src": "4234:211:11",
+              "text": " @dev Adds a given value to the TUint256Slot variable.\n @param self The TUint256Slot variable.\n @param other The value to add.\n @return res The resulting value after addition."
+            },
+            "implemented": true,
+            "kind": "function",
+            "modifiers": [],
+            "name": "add",
+            "nameLocation": "4459:3:11",
+            "parameters": {
+              "id": 2546,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2543,
+                  "mutability": "mutable",
+                  "name": "self",
+                  "nameLocation": "4485:4:11",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2552,
+                  "src": "4472:17:11",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_userDefinedValueType$_TUint256Slot_$2446",
+                    "typeString": "TUint256Slot"
+                  },
+                  "typeName": {
+                    "id": 2542,
+                    "nodeType": "UserDefinedTypeName",
+                    "pathNode": {
+                      "id": 2541,
+                      "name": "TUint256Slot",
+                      "nameLocations": [
+                        "4472:12:11"
+                      ],
+                      "nodeType": "IdentifierPath",
+                      "referencedDeclaration": 2446,
+                      "src": "4472:12:11"
+                    },
+                    "referencedDeclaration": 2446,
+                    "src": "4472:12:11",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_userDefinedValueType$_TUint256Slot_$2446",
+                      "typeString": "TUint256Slot"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 2545,
+                  "mutability": "mutable",
+                  "name": "other",
+                  "nameLocation": "4507:5:11",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2552,
+                  "src": "4499:13:11",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 2544,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "4499:7:11",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "4462:56:11"
+            },
+            "returnParameters": {
+              "id": 2549,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2548,
+                  "mutability": "mutable",
+                  "name": "res",
+                  "nameLocation": "4550:3:11",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2552,
+                  "src": "4542:11:11",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 2547,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "4542:7:11",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "4541:13:11"
+            },
+            "scope": 2677,
+            "stateMutability": "view",
+            "virtual": false,
+            "visibility": "internal"
+          },
+          {
+            "id": 2569,
+            "nodeType": "FunctionDefinition",
+            "src": "5361:113:11",
+            "nodes": [],
+            "body": {
+              "id": 2568,
+              "nodeType": "Block",
+              "src": "5433:41:11",
+              "nodes": [],
+              "statements": [
+                {
+                  "expression": {
+                    "id": 2566,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "lValueRequested": false,
+                    "leftHandSide": {
+                      "id": 2561,
+                      "name": "res",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 2559,
+                      "src": "5443:3:11",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_uint256",
+                        "typeString": "uint256"
+                      }
+                    },
+                    "nodeType": "Assignment",
+                    "operator": "=",
+                    "rightHandSide": {
+                      "arguments": [
+                        {
+                          "id": 2563,
+                          "name": "self",
+                          "nodeType": "Identifier",
+                          "overloadedDeclarations": [],
+                          "referencedDeclaration": 2556,
+                          "src": "5459:4:11",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_userDefinedValueType$_TUint256Slot_$2446",
+                            "typeString": "TUint256Slot"
+                          }
+                        },
+                        {
+                          "hexValue": "31",
+                          "id": 2564,
+                          "isConstant": false,
+                          "isLValue": false,
+                          "isPure": true,
+                          "kind": "number",
+                          "lValueRequested": false,
+                          "nodeType": "Literal",
+                          "src": "5465:1:11",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_rational_1_by_1",
+                            "typeString": "int_const 1"
+                          },
+                          "value": "1"
+                        }
+                      ],
+                      "expression": {
+                        "argumentTypes": [
+                          {
+                            "typeIdentifier": "t_userDefinedValueType$_TUint256Slot_$2446",
+                            "typeString": "TUint256Slot"
+                          },
+                          {
+                            "typeIdentifier": "t_rational_1_by_1",
+                            "typeString": "int_const 1"
+                          }
+                        ],
+                        "id": 2562,
+                        "name": "addAssign",
+                        "nodeType": "Identifier",
+                        "overloadedDeclarations": [],
+                        "referencedDeclaration": 2654,
+                        "src": "5449:9:11",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_function_internal_nonpayable$_t_userDefinedValueType$_TUint256Slot_$2446_$_t_uint256_$returns$_t_uint256_$",
+                          "typeString": "function (TUint256Slot,uint256) returns (uint256)"
+                        }
+                      },
+                      "id": 2565,
+                      "isConstant": false,
+                      "isLValue": false,
+                      "isPure": false,
+                      "kind": "functionCall",
+                      "lValueRequested": false,
+                      "nameLocations": [],
+                      "names": [],
+                      "nodeType": "FunctionCall",
+                      "src": "5449:18:11",
+                      "tryCall": false,
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_uint256",
+                        "typeString": "uint256"
+                      }
+                    },
+                    "src": "5443:24:11",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "id": 2567,
+                  "nodeType": "ExpressionStatement",
+                  "src": "5443:24:11"
+                }
+              ]
+            },
+            "documentation": {
+              "id": 2553,
+              "nodeType": "StructuredDocumentation",
+              "src": "5159:197:11",
+              "text": " @dev Increments the TUint256Slot variable by 1 and returns the new value.\n @param self The TUint256Slot variable.\n @return res The resulting value after incrementing."
+            },
+            "implemented": true,
+            "kind": "function",
+            "modifiers": [],
+            "name": "preIncrement",
+            "nameLocation": "5370:12:11",
+            "parameters": {
+              "id": 2557,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2556,
+                  "mutability": "mutable",
+                  "name": "self",
+                  "nameLocation": "5396:4:11",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2569,
+                  "src": "5383:17:11",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_userDefinedValueType$_TUint256Slot_$2446",
+                    "typeString": "TUint256Slot"
+                  },
+                  "typeName": {
+                    "id": 2555,
+                    "nodeType": "UserDefinedTypeName",
+                    "pathNode": {
+                      "id": 2554,
+                      "name": "TUint256Slot",
+                      "nameLocations": [
+                        "5383:12:11"
+                      ],
+                      "nodeType": "IdentifierPath",
+                      "referencedDeclaration": 2446,
+                      "src": "5383:12:11"
+                    },
+                    "referencedDeclaration": 2446,
+                    "src": "5383:12:11",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_userDefinedValueType$_TUint256Slot_$2446",
+                      "typeString": "TUint256Slot"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "5382:19:11"
+            },
+            "returnParameters": {
+              "id": 2560,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2559,
+                  "mutability": "mutable",
+                  "name": "res",
+                  "nameLocation": "5428:3:11",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2569,
+                  "src": "5420:11:11",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 2558,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "5420:7:11",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "5419:13:11"
+            },
+            "scope": 2677,
+            "stateMutability": "nonpayable",
+            "virtual": false,
+            "visibility": "internal"
+          },
+          {
+            "id": 2592,
+            "nodeType": "FunctionDefinition",
+            "src": "5687:136:11",
+            "nodes": [],
+            "body": {
+              "id": 2591,
+              "nodeType": "Block",
+              "src": "5760:63:11",
+              "nodes": [],
+              "statements": [
+                {
+                  "expression": {
+                    "id": 2582,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "lValueRequested": false,
+                    "leftHandSide": {
+                      "id": 2578,
+                      "name": "res",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 2576,
+                      "src": "5770:3:11",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_uint256",
+                        "typeString": "uint256"
+                      }
+                    },
+                    "nodeType": "Assignment",
+                    "operator": "=",
+                    "rightHandSide": {
+                      "arguments": [
+                        {
+                          "id": 2580,
+                          "name": "self",
+                          "nodeType": "Identifier",
+                          "overloadedDeclarations": [],
+                          "referencedDeclaration": 2573,
+                          "src": "5781:4:11",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_userDefinedValueType$_TUint256Slot_$2446",
+                            "typeString": "TUint256Slot"
+                          }
+                        }
+                      ],
+                      "expression": {
+                        "argumentTypes": [
+                          {
+                            "typeIdentifier": "t_userDefinedValueType$_TUint256Slot_$2446",
+                            "typeString": "TUint256Slot"
+                          }
+                        ],
+                        "id": 2579,
+                        "name": "load",
+                        "nodeType": "Identifier",
+                        "overloadedDeclarations": [],
+                        "referencedDeclaration": 2489,
+                        "src": "5776:4:11",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_function_internal_view$_t_userDefinedValueType$_TUint256Slot_$2446_$returns$_t_uint256_$",
+                          "typeString": "function (TUint256Slot) view returns (uint256)"
+                        }
+                      },
+                      "id": 2581,
+                      "isConstant": false,
+                      "isLValue": false,
+                      "isPure": false,
+                      "kind": "functionCall",
+                      "lValueRequested": false,
+                      "nameLocations": [],
+                      "names": [],
+                      "nodeType": "FunctionCall",
+                      "src": "5776:10:11",
+                      "tryCall": false,
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_uint256",
+                        "typeString": "uint256"
+                      }
+                    },
+                    "src": "5770:16:11",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "id": 2583,
+                  "nodeType": "ExpressionStatement",
+                  "src": "5770:16:11"
+                },
+                {
+                  "expression": {
+                    "arguments": [
+                      {
+                        "id": 2585,
+                        "name": "self",
+                        "nodeType": "Identifier",
+                        "overloadedDeclarations": [],
+                        "referencedDeclaration": 2573,
+                        "src": "5802:4:11",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_userDefinedValueType$_TUint256Slot_$2446",
+                          "typeString": "TUint256Slot"
+                        }
+                      },
+                      {
+                        "commonType": {
+                          "typeIdentifier": "t_uint256",
+                          "typeString": "uint256"
+                        },
+                        "id": 2588,
+                        "isConstant": false,
+                        "isLValue": false,
+                        "isPure": false,
+                        "lValueRequested": false,
+                        "leftExpression": {
+                          "id": 2586,
+                          "name": "res",
+                          "nodeType": "Identifier",
+                          "overloadedDeclarations": [],
+                          "referencedDeclaration": 2576,
+                          "src": "5808:3:11",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_uint256",
+                            "typeString": "uint256"
+                          }
+                        },
+                        "nodeType": "BinaryOperation",
+                        "operator": "+",
+                        "rightExpression": {
+                          "hexValue": "31",
+                          "id": 2587,
+                          "isConstant": false,
+                          "isLValue": false,
+                          "isPure": true,
+                          "kind": "number",
+                          "lValueRequested": false,
+                          "nodeType": "Literal",
+                          "src": "5814:1:11",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_rational_1_by_1",
+                            "typeString": "int_const 1"
+                          },
+                          "value": "1"
+                        },
+                        "src": "5808:7:11",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint256",
+                          "typeString": "uint256"
+                        }
+                      }
+                    ],
+                    "expression": {
+                      "argumentTypes": [
+                        {
+                          "typeIdentifier": "t_userDefinedValueType$_TUint256Slot_$2446",
+                          "typeString": "TUint256Slot"
+                        },
+                        {
+                          "typeIdentifier": "t_uint256",
+                          "typeString": "uint256"
+                        }
+                      ],
+                      "id": 2584,
+                      "name": "store",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 2500,
+                      "src": "5796:5:11",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_function_internal_nonpayable$_t_userDefinedValueType$_TUint256Slot_$2446_$_t_uint256_$returns$__$",
+                        "typeString": "function (TUint256Slot,uint256)"
+                      }
+                    },
+                    "id": 2589,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "kind": "functionCall",
+                    "lValueRequested": false,
+                    "nameLocations": [],
+                    "names": [],
+                    "nodeType": "FunctionCall",
+                    "src": "5796:20:11",
+                    "tryCall": false,
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_tuple$__$",
+                      "typeString": "tuple()"
+                    }
+                  },
+                  "id": 2590,
+                  "nodeType": "ExpressionStatement",
+                  "src": "5796:20:11"
+                }
+              ]
+            },
+            "documentation": {
+              "id": 2570,
+              "nodeType": "StructuredDocumentation",
+              "src": "5480:202:11",
+              "text": " @dev Increments the TUint256Slot variable by 1 and returns the original value.\n @param self The TUint256Slot variable.\n @return res The original value before incrementing."
+            },
+            "implemented": true,
+            "kind": "function",
+            "modifiers": [],
+            "name": "postIncrement",
+            "nameLocation": "5696:13:11",
+            "parameters": {
+              "id": 2574,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2573,
+                  "mutability": "mutable",
+                  "name": "self",
+                  "nameLocation": "5723:4:11",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2592,
+                  "src": "5710:17:11",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_userDefinedValueType$_TUint256Slot_$2446",
+                    "typeString": "TUint256Slot"
+                  },
+                  "typeName": {
+                    "id": 2572,
+                    "nodeType": "UserDefinedTypeName",
+                    "pathNode": {
+                      "id": 2571,
+                      "name": "TUint256Slot",
+                      "nameLocations": [
+                        "5710:12:11"
+                      ],
+                      "nodeType": "IdentifierPath",
+                      "referencedDeclaration": 2446,
+                      "src": "5710:12:11"
+                    },
+                    "referencedDeclaration": 2446,
+                    "src": "5710:12:11",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_userDefinedValueType$_TUint256Slot_$2446",
+                      "typeString": "TUint256Slot"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "5709:19:11"
+            },
+            "returnParameters": {
+              "id": 2577,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2576,
+                  "mutability": "mutable",
+                  "name": "res",
+                  "nameLocation": "5755:3:11",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2592,
+                  "src": "5747:11:11",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 2575,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "5747:7:11",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "5746:13:11"
+            },
+            "scope": 2677,
+            "stateMutability": "nonpayable",
+            "virtual": false,
+            "visibility": "internal"
+          },
+          {
+            "id": 2609,
+            "nodeType": "FunctionDefinition",
+            "src": "6031:113:11",
+            "nodes": [],
+            "body": {
+              "id": 2608,
+              "nodeType": "Block",
+              "src": "6103:41:11",
+              "nodes": [],
+              "statements": [
+                {
+                  "expression": {
+                    "id": 2606,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "lValueRequested": false,
+                    "leftHandSide": {
+                      "id": 2601,
+                      "name": "res",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 2599,
+                      "src": "6113:3:11",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_uint256",
+                        "typeString": "uint256"
+                      }
+                    },
+                    "nodeType": "Assignment",
+                    "operator": "=",
+                    "rightHandSide": {
+                      "arguments": [
+                        {
+                          "id": 2603,
+                          "name": "self",
+                          "nodeType": "Identifier",
+                          "overloadedDeclarations": [],
+                          "referencedDeclaration": 2596,
+                          "src": "6129:4:11",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_userDefinedValueType$_TUint256Slot_$2446",
+                            "typeString": "TUint256Slot"
+                          }
+                        },
+                        {
+                          "hexValue": "31",
+                          "id": 2604,
+                          "isConstant": false,
+                          "isLValue": false,
+                          "isPure": true,
+                          "kind": "number",
+                          "lValueRequested": false,
+                          "nodeType": "Literal",
+                          "src": "6135:1:11",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_rational_1_by_1",
+                            "typeString": "int_const 1"
+                          },
+                          "value": "1"
+                        }
+                      ],
+                      "expression": {
+                        "argumentTypes": [
+                          {
+                            "typeIdentifier": "t_userDefinedValueType$_TUint256Slot_$2446",
+                            "typeString": "TUint256Slot"
+                          },
+                          {
+                            "typeIdentifier": "t_rational_1_by_1",
+                            "typeString": "int_const 1"
+                          }
+                        ],
+                        "id": 2602,
+                        "name": "subAssign",
+                        "nodeType": "Identifier",
+                        "overloadedDeclarations": [],
+                        "referencedDeclaration": 2676,
+                        "src": "6119:9:11",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_function_internal_nonpayable$_t_userDefinedValueType$_TUint256Slot_$2446_$_t_uint256_$returns$_t_uint256_$",
+                          "typeString": "function (TUint256Slot,uint256) returns (uint256)"
+                        }
+                      },
+                      "id": 2605,
+                      "isConstant": false,
+                      "isLValue": false,
+                      "isPure": false,
+                      "kind": "functionCall",
+                      "lValueRequested": false,
+                      "nameLocations": [],
+                      "names": [],
+                      "nodeType": "FunctionCall",
+                      "src": "6119:18:11",
+                      "tryCall": false,
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_uint256",
+                        "typeString": "uint256"
+                      }
+                    },
+                    "src": "6113:24:11",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "id": 2607,
+                  "nodeType": "ExpressionStatement",
+                  "src": "6113:24:11"
+                }
+              ]
+            },
+            "documentation": {
+              "id": 2593,
+              "nodeType": "StructuredDocumentation",
+              "src": "5829:197:11",
+              "text": " @dev Decrements the TUint256Slot variable by 1 and returns the new value.\n @param self The TUint256Slot variable.\n @return res The resulting value after decrementing."
+            },
+            "implemented": true,
+            "kind": "function",
+            "modifiers": [],
+            "name": "preDecrement",
+            "nameLocation": "6040:12:11",
+            "parameters": {
+              "id": 2597,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2596,
+                  "mutability": "mutable",
+                  "name": "self",
+                  "nameLocation": "6066:4:11",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2609,
+                  "src": "6053:17:11",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_userDefinedValueType$_TUint256Slot_$2446",
+                    "typeString": "TUint256Slot"
+                  },
+                  "typeName": {
+                    "id": 2595,
+                    "nodeType": "UserDefinedTypeName",
+                    "pathNode": {
+                      "id": 2594,
+                      "name": "TUint256Slot",
+                      "nameLocations": [
+                        "6053:12:11"
+                      ],
+                      "nodeType": "IdentifierPath",
+                      "referencedDeclaration": 2446,
+                      "src": "6053:12:11"
+                    },
+                    "referencedDeclaration": 2446,
+                    "src": "6053:12:11",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_userDefinedValueType$_TUint256Slot_$2446",
+                      "typeString": "TUint256Slot"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "6052:19:11"
+            },
+            "returnParameters": {
+              "id": 2600,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2599,
+                  "mutability": "mutable",
+                  "name": "res",
+                  "nameLocation": "6098:3:11",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2609,
+                  "src": "6090:11:11",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 2598,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "6090:7:11",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "6089:13:11"
+            },
+            "scope": 2677,
+            "stateMutability": "nonpayable",
+            "virtual": false,
+            "visibility": "internal"
+          },
+          {
+            "id": 2632,
+            "nodeType": "FunctionDefinition",
+            "src": "6353:136:11",
+            "nodes": [],
+            "body": {
+              "id": 2631,
+              "nodeType": "Block",
+              "src": "6426:63:11",
+              "nodes": [],
+              "statements": [
+                {
+                  "expression": {
+                    "id": 2622,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "lValueRequested": false,
+                    "leftHandSide": {
+                      "id": 2618,
+                      "name": "res",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 2616,
+                      "src": "6436:3:11",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_uint256",
+                        "typeString": "uint256"
+                      }
+                    },
+                    "nodeType": "Assignment",
+                    "operator": "=",
+                    "rightHandSide": {
+                      "arguments": [
+                        {
+                          "id": 2620,
+                          "name": "self",
+                          "nodeType": "Identifier",
+                          "overloadedDeclarations": [],
+                          "referencedDeclaration": 2613,
+                          "src": "6447:4:11",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_userDefinedValueType$_TUint256Slot_$2446",
+                            "typeString": "TUint256Slot"
+                          }
+                        }
+                      ],
+                      "expression": {
+                        "argumentTypes": [
+                          {
+                            "typeIdentifier": "t_userDefinedValueType$_TUint256Slot_$2446",
+                            "typeString": "TUint256Slot"
+                          }
+                        ],
+                        "id": 2619,
+                        "name": "load",
+                        "nodeType": "Identifier",
+                        "overloadedDeclarations": [],
+                        "referencedDeclaration": 2489,
+                        "src": "6442:4:11",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_function_internal_view$_t_userDefinedValueType$_TUint256Slot_$2446_$returns$_t_uint256_$",
+                          "typeString": "function (TUint256Slot) view returns (uint256)"
+                        }
+                      },
+                      "id": 2621,
+                      "isConstant": false,
+                      "isLValue": false,
+                      "isPure": false,
+                      "kind": "functionCall",
+                      "lValueRequested": false,
+                      "nameLocations": [],
+                      "names": [],
+                      "nodeType": "FunctionCall",
+                      "src": "6442:10:11",
+                      "tryCall": false,
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_uint256",
+                        "typeString": "uint256"
+                      }
+                    },
+                    "src": "6436:16:11",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "id": 2623,
+                  "nodeType": "ExpressionStatement",
+                  "src": "6436:16:11"
+                },
+                {
+                  "expression": {
+                    "arguments": [
+                      {
+                        "id": 2625,
+                        "name": "self",
+                        "nodeType": "Identifier",
+                        "overloadedDeclarations": [],
+                        "referencedDeclaration": 2613,
+                        "src": "6468:4:11",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_userDefinedValueType$_TUint256Slot_$2446",
+                          "typeString": "TUint256Slot"
+                        }
+                      },
+                      {
+                        "commonType": {
+                          "typeIdentifier": "t_uint256",
+                          "typeString": "uint256"
+                        },
+                        "id": 2628,
+                        "isConstant": false,
+                        "isLValue": false,
+                        "isPure": false,
+                        "lValueRequested": false,
+                        "leftExpression": {
+                          "id": 2626,
+                          "name": "res",
+                          "nodeType": "Identifier",
+                          "overloadedDeclarations": [],
+                          "referencedDeclaration": 2616,
+                          "src": "6474:3:11",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_uint256",
+                            "typeString": "uint256"
+                          }
+                        },
+                        "nodeType": "BinaryOperation",
+                        "operator": "-",
+                        "rightExpression": {
+                          "hexValue": "31",
+                          "id": 2627,
+                          "isConstant": false,
+                          "isLValue": false,
+                          "isPure": true,
+                          "kind": "number",
+                          "lValueRequested": false,
+                          "nodeType": "Literal",
+                          "src": "6480:1:11",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_rational_1_by_1",
+                            "typeString": "int_const 1"
+                          },
+                          "value": "1"
+                        },
+                        "src": "6474:7:11",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint256",
+                          "typeString": "uint256"
+                        }
+                      }
+                    ],
+                    "expression": {
+                      "argumentTypes": [
+                        {
+                          "typeIdentifier": "t_userDefinedValueType$_TUint256Slot_$2446",
+                          "typeString": "TUint256Slot"
+                        },
+                        {
+                          "typeIdentifier": "t_uint256",
+                          "typeString": "uint256"
+                        }
+                      ],
+                      "id": 2624,
+                      "name": "store",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 2500,
+                      "src": "6462:5:11",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_function_internal_nonpayable$_t_userDefinedValueType$_TUint256Slot_$2446_$_t_uint256_$returns$__$",
+                        "typeString": "function (TUint256Slot,uint256)"
+                      }
+                    },
+                    "id": 2629,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "kind": "functionCall",
+                    "lValueRequested": false,
+                    "nameLocations": [],
+                    "names": [],
+                    "nodeType": "FunctionCall",
+                    "src": "6462:20:11",
+                    "tryCall": false,
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_tuple$__$",
+                      "typeString": "tuple()"
+                    }
+                  },
+                  "id": 2630,
+                  "nodeType": "ExpressionStatement",
+                  "src": "6462:20:11"
+                }
+              ]
+            },
+            "documentation": {
+              "id": 2610,
+              "nodeType": "StructuredDocumentation",
+              "src": "6150:198:11",
+              "text": " @dev Decrements the TUint256Slot variable by 1 and returns the new value.\n @param self The TUint256Slot variable.\n @return res The resulting value before decrementing."
+            },
+            "implemented": true,
+            "kind": "function",
+            "modifiers": [],
+            "name": "postDecrement",
+            "nameLocation": "6362:13:11",
+            "parameters": {
+              "id": 2614,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2613,
+                  "mutability": "mutable",
+                  "name": "self",
+                  "nameLocation": "6389:4:11",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2632,
+                  "src": "6376:17:11",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_userDefinedValueType$_TUint256Slot_$2446",
+                    "typeString": "TUint256Slot"
+                  },
+                  "typeName": {
+                    "id": 2612,
+                    "nodeType": "UserDefinedTypeName",
+                    "pathNode": {
+                      "id": 2611,
+                      "name": "TUint256Slot",
+                      "nameLocations": [
+                        "6376:12:11"
+                      ],
+                      "nodeType": "IdentifierPath",
+                      "referencedDeclaration": 2446,
+                      "src": "6376:12:11"
+                    },
+                    "referencedDeclaration": 2446,
+                    "src": "6376:12:11",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_userDefinedValueType$_TUint256Slot_$2446",
+                      "typeString": "TUint256Slot"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "6375:19:11"
+            },
+            "returnParameters": {
+              "id": 2617,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2616,
+                  "mutability": "mutable",
+                  "name": "res",
+                  "nameLocation": "6421:3:11",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2632,
+                  "src": "6413:11:11",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 2615,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "6413:7:11",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "6412:13:11"
+            },
+            "scope": 2677,
+            "stateMutability": "nonpayable",
+            "virtual": false,
+            "visibility": "internal"
+          },
+          {
+            "id": 2654,
+            "nodeType": "FunctionDefinition",
+            "src": "6745:158:11",
+            "nodes": [],
+            "body": {
+              "id": 2653,
+              "nodeType": "Block",
+              "src": "6851:52:11",
+              "nodes": [],
+              "statements": [
+                {
+                  "expression": {
+                    "arguments": [
+                      {
+                        "id": 2644,
+                        "name": "self",
+                        "nodeType": "Identifier",
+                        "overloadedDeclarations": [],
+                        "referencedDeclaration": 2636,
+                        "src": "6867:4:11",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_userDefinedValueType$_TUint256Slot_$2446",
+                          "typeString": "TUint256Slot"
+                        }
+                      },
+                      {
+                        "id": 2650,
+                        "isConstant": false,
+                        "isLValue": false,
+                        "isPure": false,
+                        "lValueRequested": false,
+                        "leftHandSide": {
+                          "id": 2645,
+                          "name": "res",
+                          "nodeType": "Identifier",
+                          "overloadedDeclarations": [],
+                          "referencedDeclaration": 2641,
+                          "src": "6873:3:11",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_uint256",
+                            "typeString": "uint256"
+                          }
+                        },
+                        "nodeType": "Assignment",
+                        "operator": "=",
+                        "rightHandSide": {
+                          "arguments": [
+                            {
+                              "id": 2647,
+                              "name": "self",
+                              "nodeType": "Identifier",
+                              "overloadedDeclarations": [],
+                              "referencedDeclaration": 2636,
+                              "src": "6883:4:11",
+                              "typeDescriptions": {
+                                "typeIdentifier": "t_userDefinedValueType$_TUint256Slot_$2446",
+                                "typeString": "TUint256Slot"
+                              }
+                            },
+                            {
+                              "id": 2648,
+                              "name": "other",
+                              "nodeType": "Identifier",
+                              "overloadedDeclarations": [],
+                              "referencedDeclaration": 2638,
+                              "src": "6889:5:11",
+                              "typeDescriptions": {
+                                "typeIdentifier": "t_uint256",
+                                "typeString": "uint256"
+                              }
+                            }
+                          ],
+                          "expression": {
+                            "argumentTypes": [
+                              {
+                                "typeIdentifier": "t_userDefinedValueType$_TUint256Slot_$2446",
+                                "typeString": "TUint256Slot"
+                              },
+                              {
+                                "typeIdentifier": "t_uint256",
+                                "typeString": "uint256"
+                              }
+                            ],
+                            "id": 2646,
+                            "name": "add",
+                            "nodeType": "Identifier",
+                            "overloadedDeclarations": [],
+                            "referencedDeclaration": 2552,
+                            "src": "6879:3:11",
+                            "typeDescriptions": {
+                              "typeIdentifier": "t_function_internal_view$_t_userDefinedValueType$_TUint256Slot_$2446_$_t_uint256_$returns$_t_uint256_$",
+                              "typeString": "function (TUint256Slot,uint256) view returns (uint256)"
+                            }
+                          },
+                          "id": 2649,
+                          "isConstant": false,
+                          "isLValue": false,
+                          "isPure": false,
+                          "kind": "functionCall",
+                          "lValueRequested": false,
+                          "nameLocations": [],
+                          "names": [],
+                          "nodeType": "FunctionCall",
+                          "src": "6879:16:11",
+                          "tryCall": false,
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_uint256",
+                            "typeString": "uint256"
+                          }
+                        },
+                        "src": "6873:22:11",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint256",
+                          "typeString": "uint256"
+                        }
+                      }
+                    ],
+                    "expression": {
+                      "argumentTypes": [
+                        {
+                          "typeIdentifier": "t_userDefinedValueType$_TUint256Slot_$2446",
+                          "typeString": "TUint256Slot"
+                        },
+                        {
+                          "typeIdentifier": "t_uint256",
+                          "typeString": "uint256"
+                        }
+                      ],
+                      "id": 2643,
+                      "name": "store",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 2500,
+                      "src": "6861:5:11",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_function_internal_nonpayable$_t_userDefinedValueType$_TUint256Slot_$2446_$_t_uint256_$returns$__$",
+                        "typeString": "function (TUint256Slot,uint256)"
+                      }
+                    },
+                    "id": 2651,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "kind": "functionCall",
+                    "lValueRequested": false,
+                    "nameLocations": [],
+                    "names": [],
+                    "nodeType": "FunctionCall",
+                    "src": "6861:35:11",
+                    "tryCall": false,
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_tuple$__$",
+                      "typeString": "tuple()"
+                    }
+                  },
+                  "id": 2652,
+                  "nodeType": "ExpressionStatement",
+                  "src": "6861:35:11"
+                }
+              ]
+            },
+            "documentation": {
+              "id": 2633,
+              "nodeType": "StructuredDocumentation",
+              "src": "6495:245:11",
+              "text": " @dev Adds a given value to the TUint256Slot variable and stores the result.\n @param self The TUint256Slot variable.\n @param other The value to add.\n @return res The resulting value after addition and storage."
+            },
+            "implemented": true,
+            "kind": "function",
+            "modifiers": [],
+            "name": "addAssign",
+            "nameLocation": "6754:9:11",
+            "parameters": {
+              "id": 2639,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2636,
+                  "mutability": "mutable",
+                  "name": "self",
+                  "nameLocation": "6786:4:11",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2654,
+                  "src": "6773:17:11",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_userDefinedValueType$_TUint256Slot_$2446",
+                    "typeString": "TUint256Slot"
+                  },
+                  "typeName": {
+                    "id": 2635,
+                    "nodeType": "UserDefinedTypeName",
+                    "pathNode": {
+                      "id": 2634,
+                      "name": "TUint256Slot",
+                      "nameLocations": [
+                        "6773:12:11"
+                      ],
+                      "nodeType": "IdentifierPath",
+                      "referencedDeclaration": 2446,
+                      "src": "6773:12:11"
+                    },
+                    "referencedDeclaration": 2446,
+                    "src": "6773:12:11",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_userDefinedValueType$_TUint256Slot_$2446",
+                      "typeString": "TUint256Slot"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 2638,
+                  "mutability": "mutable",
+                  "name": "other",
+                  "nameLocation": "6808:5:11",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2654,
+                  "src": "6800:13:11",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 2637,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "6800:7:11",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "6763:56:11"
+            },
+            "returnParameters": {
+              "id": 2642,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2641,
+                  "mutability": "mutable",
+                  "name": "res",
+                  "nameLocation": "6846:3:11",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2654,
+                  "src": "6838:11:11",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 2640,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "6838:7:11",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "6837:13:11"
+            },
+            "scope": 2677,
+            "stateMutability": "nonpayable",
+            "virtual": false,
+            "visibility": "internal"
+          },
+          {
+            "id": 2676,
+            "nodeType": "FunctionDefinition",
+            "src": "7174:158:11",
+            "nodes": [],
+            "body": {
+              "id": 2675,
+              "nodeType": "Block",
+              "src": "7280:52:11",
+              "nodes": [],
+              "statements": [
+                {
+                  "expression": {
+                    "arguments": [
+                      {
+                        "id": 2666,
+                        "name": "self",
+                        "nodeType": "Identifier",
+                        "overloadedDeclarations": [],
+                        "referencedDeclaration": 2658,
+                        "src": "7296:4:11",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_userDefinedValueType$_TUint256Slot_$2446",
+                          "typeString": "TUint256Slot"
+                        }
+                      },
+                      {
+                        "id": 2672,
+                        "isConstant": false,
+                        "isLValue": false,
+                        "isPure": false,
+                        "lValueRequested": false,
+                        "leftHandSide": {
+                          "id": 2667,
+                          "name": "res",
+                          "nodeType": "Identifier",
+                          "overloadedDeclarations": [],
+                          "referencedDeclaration": 2663,
+                          "src": "7302:3:11",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_uint256",
+                            "typeString": "uint256"
+                          }
+                        },
+                        "nodeType": "Assignment",
+                        "operator": "=",
+                        "rightHandSide": {
+                          "arguments": [
+                            {
+                              "id": 2669,
+                              "name": "self",
+                              "nodeType": "Identifier",
+                              "overloadedDeclarations": [],
+                              "referencedDeclaration": 2658,
+                              "src": "7312:4:11",
+                              "typeDescriptions": {
+                                "typeIdentifier": "t_userDefinedValueType$_TUint256Slot_$2446",
+                                "typeString": "TUint256Slot"
+                              }
+                            },
+                            {
+                              "id": 2670,
+                              "name": "other",
+                              "nodeType": "Identifier",
+                              "overloadedDeclarations": [],
+                              "referencedDeclaration": 2660,
+                              "src": "7318:5:11",
+                              "typeDescriptions": {
+                                "typeIdentifier": "t_uint256",
+                                "typeString": "uint256"
+                              }
+                            }
+                          ],
+                          "expression": {
+                            "argumentTypes": [
+                              {
+                                "typeIdentifier": "t_userDefinedValueType$_TUint256Slot_$2446",
+                                "typeString": "TUint256Slot"
+                              },
+                              {
+                                "typeIdentifier": "t_uint256",
+                                "typeString": "uint256"
+                              }
+                            ],
+                            "id": 2668,
+                            "name": "sub",
+                            "nodeType": "Identifier",
+                            "overloadedDeclarations": [],
+                            "referencedDeclaration": 2539,
+                            "src": "7308:3:11",
+                            "typeDescriptions": {
+                              "typeIdentifier": "t_function_internal_view$_t_userDefinedValueType$_TUint256Slot_$2446_$_t_uint256_$returns$_t_uint256_$",
+                              "typeString": "function (TUint256Slot,uint256) view returns (uint256)"
+                            }
+                          },
+                          "id": 2671,
+                          "isConstant": false,
+                          "isLValue": false,
+                          "isPure": false,
+                          "kind": "functionCall",
+                          "lValueRequested": false,
+                          "nameLocations": [],
+                          "names": [],
+                          "nodeType": "FunctionCall",
+                          "src": "7308:16:11",
+                          "tryCall": false,
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_uint256",
+                            "typeString": "uint256"
+                          }
+                        },
+                        "src": "7302:22:11",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint256",
+                          "typeString": "uint256"
+                        }
+                      }
+                    ],
+                    "expression": {
+                      "argumentTypes": [
+                        {
+                          "typeIdentifier": "t_userDefinedValueType$_TUint256Slot_$2446",
+                          "typeString": "TUint256Slot"
+                        },
+                        {
+                          "typeIdentifier": "t_uint256",
+                          "typeString": "uint256"
+                        }
+                      ],
+                      "id": 2665,
+                      "name": "store",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 2500,
+                      "src": "7290:5:11",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_function_internal_nonpayable$_t_userDefinedValueType$_TUint256Slot_$2446_$_t_uint256_$returns$__$",
+                        "typeString": "function (TUint256Slot,uint256)"
+                      }
+                    },
+                    "id": 2673,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "kind": "functionCall",
+                    "lValueRequested": false,
+                    "nameLocations": [],
+                    "names": [],
+                    "nodeType": "FunctionCall",
+                    "src": "7290:35:11",
+                    "tryCall": false,
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_tuple$__$",
+                      "typeString": "tuple()"
+                    }
+                  },
+                  "id": 2674,
+                  "nodeType": "ExpressionStatement",
+                  "src": "7290:35:11"
+                }
+              ]
+            },
+            "documentation": {
+              "id": 2655,
+              "nodeType": "StructuredDocumentation",
+              "src": "6909:260:11",
+              "text": " @dev Subtracts a given value from the TUint256Slot variable and stores the result.\n @param self The TUint256Slot variable.\n @param other The value to subtract.\n @return res The resulting value after subtraction and storage."
+            },
+            "implemented": true,
+            "kind": "function",
+            "modifiers": [],
+            "name": "subAssign",
+            "nameLocation": "7183:9:11",
+            "parameters": {
+              "id": 2661,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2658,
+                  "mutability": "mutable",
+                  "name": "self",
+                  "nameLocation": "7215:4:11",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2676,
+                  "src": "7202:17:11",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_userDefinedValueType$_TUint256Slot_$2446",
+                    "typeString": "TUint256Slot"
+                  },
+                  "typeName": {
+                    "id": 2657,
+                    "nodeType": "UserDefinedTypeName",
+                    "pathNode": {
+                      "id": 2656,
+                      "name": "TUint256Slot",
+                      "nameLocations": [
+                        "7202:12:11"
+                      ],
+                      "nodeType": "IdentifierPath",
+                      "referencedDeclaration": 2446,
+                      "src": "7202:12:11"
+                    },
+                    "referencedDeclaration": 2446,
+                    "src": "7202:12:11",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_userDefinedValueType$_TUint256Slot_$2446",
+                      "typeString": "TUint256Slot"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 2660,
+                  "mutability": "mutable",
+                  "name": "other",
+                  "nameLocation": "7237:5:11",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2676,
+                  "src": "7229:13:11",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 2659,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "7229:7:11",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "7192:56:11"
+            },
+            "returnParameters": {
+              "id": 2664,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2663,
+                  "mutability": "mutable",
+                  "name": "res",
+                  "nameLocation": "7275:3:11",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2676,
+                  "src": "7267:11:11",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 2662,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "7267:7:11",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "7266:13:11"
+            },
+            "scope": 2677,
+            "stateMutability": "nonpayable",
+            "virtual": false,
+            "visibility": "internal"
+          }
+        ],
+        "abstract": false,
+        "baseContracts": [],
+        "canonicalName": "LibTUint256Slot",
+        "contractDependencies": [],
+        "contractKind": "library",
+        "documentation": {
+          "id": 2466,
+          "nodeType": "StructuredDocumentation",
+          "src": "102:89:11",
+          "text": " @title LibTUint256Slot\n @dev Library for handling unsigned 256-bit integers."
+        },
+        "fullyImplemented": true,
+        "linearizedBaseContracts": [
+          2677
+        ],
+        "name": "LibTUint256Slot",
+        "nameLocation": "200:15:11",
+        "scope": 2678,
+        "usedErrors": [],
+        "usedEvents": []
+      }
+    ],
+    "license": "MIT"
+  },
+  "id": 11
+}

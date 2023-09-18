@@ -1,0 +1,28 @@
+[profile.default]
+src = "contracts"
+test = "tests"
+libs = [
+    "lib",
+    "node_modules",
+    "node_modules/solady",
+    "node_modules/solmate",
+    "node_modules/hardhat",
+    "node_modules/@openzeppelin",
+]
+remappings = [
+    "forge-std/=lib/forge-std/src/",
+    "hardhat/=node_modules/hardhat/",
+    "@solit/contracts/=contracts/",
+    "solady/=node_modules/solady/",
+    "solmate/=node_modules/solmate/",
+    "ds-test/=lib/forge-std/lib/ds-test/src/",
+    "@openzeppelin/=./node_modules/@openzeppelin/",
+    "eth-gas-reporter/=node_modules/eth-gas-reporter/",
+]
+solc = '0.8.21'
+optimizer_runs = 1_000_000
+use_literal_content = true
+extra_output = ["devdoc", "userdoc", "storagelayout"]
+fs_permissions = [{ access = "read-write", path = "./" }]
+
+# See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options

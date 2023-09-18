@@ -1,0 +1,477 @@
+{
+  "abi": [
+    {
+      "inputs": [],
+      "name": "ExternalCallFailed",
+      "type": "error"
+    }
+  ],
+  "bytecode": {
+    "object": "0x60566037600b82828239805160001a607314602a57634e487b7160e01b600052600060045260246000fd5b30600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600080fdfea2646970667358221220a73b344b6b50d28a800113e83a2e59f68b9b79ba44da515f54650ec3f60be93864736f6c63430008150033",
+    "sourceMap": "57:524:5:-:0;;;;;;;;;;;;;;;-1:-1:-1;;;57:524:5;;;;;;;;;;;;;;;;;",
+    "linkReferences": {}
+  },
+  "deployedBytecode": {
+    "object": "0x73000000000000000000000000000000000000000030146080604052600080fdfea2646970667358221220a73b344b6b50d28a800113e83a2e59f68b9b79ba44da515f54650ec3f60be93864736f6c63430008150033",
+    "sourceMap": "57:524:5:-:0;;;;;;;;",
+    "linkReferences": {}
+  },
+  "methodIdentifiers": {},
+  "rawMetadata": "{\"compiler\":{\"version\":\"0.8.21+commit.d9974bed\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[],\"name\":\"ExternalCallFailed\",\"type\":\"error\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/libraries/LibErrorHandler.sol\":\"LibErrorHandler\"},\"evmVersion\":\"paris\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\",\"useLiteralContent\":true},\"optimizer\":{\"enabled\":true,\"runs\":1000000},\"remappings\":[\":@openzeppelin/=node_modules/@openzeppelin/\",\":@solit/contracts/=contracts/\",\":contracts-upgradeable/=node_modules/@openzeppelin/contracts-upgradeable/\",\":ds-test/=lib/forge-std/lib/ds-test/src/\",\":eth-gas-reporter/=node_modules/eth-gas-reporter/\",\":forge-std/=lib/forge-std/src/\",\":hardhat/=node_modules/hardhat/\",\":sample-projects/=node_modules/hardhat/sample-projects/\",\":solady/=node_modules/solady/\",\":solmate/=node_modules/solmate/\"]},\"sources\":{\"contracts/libraries/LibErrorHandler.sol\":{\"content\":\"//SPDX-License-Identifier: MIT\\npragma solidity ^0.8.20;\\n\\nlibrary LibErrorHandler {\\n    error ExternalCallFailed();\\n\\n    function handleRevert(\\n        bool success,\\n        bytes memory returnOrRevertData\\n    ) internal pure {\\n        if (success) {\\n            if (returnOrRevertData.length != 0) {\\n                assembly (\\\"memory-safe\\\") {\\n                    revert(\\n                        add(returnOrRevertData, 0x20),\\n                        mload(returnOrRevertData)\\n                    )\\n                }\\n            } else revert ExternalCallFailed();\\n        }\\n    }\\n}\\n\",\"keccak256\":\"0x978db211753bc1b354f7fcb74251533e53bccaba3412c0657a7eee3a2767ffcf\",\"license\":\"MIT\"}},\"version\":1}",
+  "metadata": {
+    "compiler": {
+      "version": "0.8.21+commit.d9974bed"
+    },
+    "language": "Solidity",
+    "output": {
+      "abi": [
+        {
+          "inputs": [],
+          "type": "error",
+          "name": "ExternalCallFailed"
+        }
+      ],
+      "devdoc": {
+        "kind": "dev",
+        "methods": {},
+        "version": 1
+      },
+      "userdoc": {
+        "kind": "user",
+        "methods": {},
+        "version": 1
+      }
+    },
+    "settings": {
+      "remappings": [
+        "@openzeppelin/=node_modules/@openzeppelin/",
+        "@solit/contracts/=contracts/",
+        "contracts-upgradeable/=node_modules/@openzeppelin/contracts-upgradeable/",
+        "ds-test/=lib/forge-std/lib/ds-test/src/",
+        "eth-gas-reporter/=node_modules/eth-gas-reporter/",
+        "forge-std/=lib/forge-std/src/",
+        "hardhat/=node_modules/hardhat/",
+        "sample-projects/=node_modules/hardhat/sample-projects/",
+        "solady/=node_modules/solady/",
+        "solmate/=node_modules/solmate/"
+      ],
+      "optimizer": {
+        "enabled": true,
+        "runs": 1000000
+      },
+      "metadata": {
+        "useLiteralContent": true,
+        "bytecodeHash": "ipfs"
+      },
+      "compilationTarget": {
+        "contracts/libraries/LibErrorHandler.sol": "LibErrorHandler"
+      },
+      "libraries": {}
+    },
+    "sources": {
+      "contracts/libraries/LibErrorHandler.sol": {
+        "keccak256": "0x978db211753bc1b354f7fcb74251533e53bccaba3412c0657a7eee3a2767ffcf",
+        "urls": [],
+        "content": "//SPDX-License-Identifier: MIT\npragma solidity ^0.8.20;\n\nlibrary LibErrorHandler {\n    error ExternalCallFailed();\n\n    function handleRevert(\n        bool success,\n        bytes memory returnOrRevertData\n    ) internal pure {\n        if (success) {\n            if (returnOrRevertData.length != 0) {\n                assembly (\"memory-safe\") {\n                    revert(\n                        add(returnOrRevertData, 0x20),\n                        mload(returnOrRevertData)\n                    )\n                }\n            } else revert ExternalCallFailed();\n        }\n    }\n}\n",
+        "license": "MIT"
+      }
+    },
+    "version": 1
+  },
+  "storageLayout": {
+    "storage": [],
+    "types": {}
+  },
+  "userdoc": {
+    "version": 1,
+    "kind": "user"
+  },
+  "devdoc": {
+    "version": 1,
+    "kind": "dev"
+  },
+  "ast": {
+    "absolutePath": "contracts/libraries/LibErrorHandler.sol",
+    "id": 1506,
+    "exportedSymbols": {
+      "LibErrorHandler": [
+        1505
+      ]
+    },
+    "nodeType": "SourceUnit",
+    "src": "31:551:5",
+    "nodes": [
+      {
+        "id": 1481,
+        "nodeType": "PragmaDirective",
+        "src": "31:24:5",
+        "nodes": [],
+        "literals": [
+          "solidity",
+          "^",
+          "0.8",
+          ".20"
+        ]
+      },
+      {
+        "id": 1505,
+        "nodeType": "ContractDefinition",
+        "src": "57:524:5",
+        "nodes": [
+          {
+            "id": 1483,
+            "nodeType": "ErrorDefinition",
+            "src": "87:27:5",
+            "nodes": [],
+            "errorSelector": "350c20f1",
+            "name": "ExternalCallFailed",
+            "nameLocation": "93:18:5",
+            "parameters": {
+              "id": 1482,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "111:2:5"
+            }
+          },
+          {
+            "id": 1504,
+            "nodeType": "FunctionDefinition",
+            "src": "120:459:5",
+            "nodes": [],
+            "body": {
+              "id": 1503,
+              "nodeType": "Block",
+              "src": "225:354:5",
+              "nodes": [],
+              "statements": [
+                {
+                  "condition": {
+                    "id": 1490,
+                    "name": "success",
+                    "nodeType": "Identifier",
+                    "overloadedDeclarations": [],
+                    "referencedDeclaration": 1485,
+                    "src": "239:7:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bool",
+                      "typeString": "bool"
+                    }
+                  },
+                  "id": 1502,
+                  "nodeType": "IfStatement",
+                  "src": "235:338:5",
+                  "trueBody": {
+                    "id": 1501,
+                    "nodeType": "Block",
+                    "src": "248:325:5",
+                    "statements": [
+                      {
+                        "condition": {
+                          "commonType": {
+                            "typeIdentifier": "t_uint256",
+                            "typeString": "uint256"
+                          },
+                          "id": 1494,
+                          "isConstant": false,
+                          "isLValue": false,
+                          "isPure": false,
+                          "lValueRequested": false,
+                          "leftExpression": {
+                            "expression": {
+                              "id": 1491,
+                              "name": "returnOrRevertData",
+                              "nodeType": "Identifier",
+                              "overloadedDeclarations": [],
+                              "referencedDeclaration": 1487,
+                              "src": "266:18:5",
+                              "typeDescriptions": {
+                                "typeIdentifier": "t_bytes_memory_ptr",
+                                "typeString": "bytes memory"
+                              }
+                            },
+                            "id": 1492,
+                            "isConstant": false,
+                            "isLValue": false,
+                            "isPure": false,
+                            "lValueRequested": false,
+                            "memberLocation": "285:6:5",
+                            "memberName": "length",
+                            "nodeType": "MemberAccess",
+                            "src": "266:25:5",
+                            "typeDescriptions": {
+                              "typeIdentifier": "t_uint256",
+                              "typeString": "uint256"
+                            }
+                          },
+                          "nodeType": "BinaryOperation",
+                          "operator": "!=",
+                          "rightExpression": {
+                            "hexValue": "30",
+                            "id": 1493,
+                            "isConstant": false,
+                            "isLValue": false,
+                            "isPure": true,
+                            "kind": "number",
+                            "lValueRequested": false,
+                            "nodeType": "Literal",
+                            "src": "295:1:5",
+                            "typeDescriptions": {
+                              "typeIdentifier": "t_rational_0_by_1",
+                              "typeString": "int_const 0"
+                            },
+                            "value": "0"
+                          },
+                          "src": "266:30:5",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_bool",
+                            "typeString": "bool"
+                          }
+                        },
+                        "falseBody": {
+                          "errorCall": {
+                            "arguments": [],
+                            "expression": {
+                              "argumentTypes": [],
+                              "id": 1497,
+                              "name": "ExternalCallFailed",
+                              "nodeType": "Identifier",
+                              "overloadedDeclarations": [],
+                              "referencedDeclaration": 1483,
+                              "src": "542:18:5",
+                              "typeDescriptions": {
+                                "typeIdentifier": "t_function_error_pure$__$returns$__$",
+                                "typeString": "function () pure"
+                              }
+                            },
+                            "id": 1498,
+                            "isConstant": false,
+                            "isLValue": false,
+                            "isPure": false,
+                            "kind": "functionCall",
+                            "lValueRequested": false,
+                            "nameLocations": [],
+                            "names": [],
+                            "nodeType": "FunctionCall",
+                            "src": "542:20:5",
+                            "tryCall": false,
+                            "typeDescriptions": {
+                              "typeIdentifier": "t_tuple$__$",
+                              "typeString": "tuple()"
+                            }
+                          },
+                          "id": 1499,
+                          "nodeType": "RevertStatement",
+                          "src": "535:27:5"
+                        },
+                        "id": 1500,
+                        "nodeType": "IfStatement",
+                        "src": "262:300:5",
+                        "trueBody": {
+                          "id": 1496,
+                          "nodeType": "Block",
+                          "src": "298:231:5",
+                          "statements": [
+                            {
+                              "AST": {
+                                "nativeSrc": "341:174:5",
+                                "nodeType": "YulBlock",
+                                "src": "341:174:5",
+                                "statements": [
+                                  {
+                                    "expression": {
+                                      "arguments": [
+                                        {
+                                          "arguments": [
+                                            {
+                                              "name": "returnOrRevertData",
+                                              "nativeSrc": "399:18:5",
+                                              "nodeType": "YulIdentifier",
+                                              "src": "399:18:5"
+                                            },
+                                            {
+                                              "kind": "number",
+                                              "nativeSrc": "419:4:5",
+                                              "nodeType": "YulLiteral",
+                                              "src": "419:4:5",
+                                              "type": "",
+                                              "value": "0x20"
+                                            }
+                                          ],
+                                          "functionName": {
+                                            "name": "add",
+                                            "nativeSrc": "395:3:5",
+                                            "nodeType": "YulIdentifier",
+                                            "src": "395:3:5"
+                                          },
+                                          "nativeSrc": "395:29:5",
+                                          "nodeType": "YulFunctionCall",
+                                          "src": "395:29:5"
+                                        },
+                                        {
+                                          "arguments": [
+                                            {
+                                              "name": "returnOrRevertData",
+                                              "nativeSrc": "456:18:5",
+                                              "nodeType": "YulIdentifier",
+                                              "src": "456:18:5"
+                                            }
+                                          ],
+                                          "functionName": {
+                                            "name": "mload",
+                                            "nativeSrc": "450:5:5",
+                                            "nodeType": "YulIdentifier",
+                                            "src": "450:5:5"
+                                          },
+                                          "nativeSrc": "450:25:5",
+                                          "nodeType": "YulFunctionCall",
+                                          "src": "450:25:5"
+                                        }
+                                      ],
+                                      "functionName": {
+                                        "name": "revert",
+                                        "nativeSrc": "363:6:5",
+                                        "nodeType": "YulIdentifier",
+                                        "src": "363:6:5"
+                                      },
+                                      "nativeSrc": "363:134:5",
+                                      "nodeType": "YulFunctionCall",
+                                      "src": "363:134:5"
+                                    },
+                                    "nativeSrc": "363:134:5",
+                                    "nodeType": "YulExpressionStatement",
+                                    "src": "363:134:5"
+                                  }
+                                ]
+                              },
+                              "evmVersion": "paris",
+                              "externalReferences": [
+                                {
+                                  "declaration": 1487,
+                                  "isOffset": false,
+                                  "isSlot": false,
+                                  "src": "399:18:5",
+                                  "valueSize": 1
+                                },
+                                {
+                                  "declaration": 1487,
+                                  "isOffset": false,
+                                  "isSlot": false,
+                                  "src": "456:18:5",
+                                  "valueSize": 1
+                                }
+                              ],
+                              "flags": [
+                                "memory-safe"
+                              ],
+                              "id": 1495,
+                              "nodeType": "InlineAssembly",
+                              "src": "316:199:5"
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            "implemented": true,
+            "kind": "function",
+            "modifiers": [],
+            "name": "handleRevert",
+            "nameLocation": "129:12:5",
+            "parameters": {
+              "id": 1488,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 1485,
+                  "mutability": "mutable",
+                  "name": "success",
+                  "nameLocation": "156:7:5",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 1504,
+                  "src": "151:12:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bool",
+                    "typeString": "bool"
+                  },
+                  "typeName": {
+                    "id": 1484,
+                    "name": "bool",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "151:4:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bool",
+                      "typeString": "bool"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 1487,
+                  "mutability": "mutable",
+                  "name": "returnOrRevertData",
+                  "nameLocation": "186:18:5",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 1504,
+                  "src": "173:31:5",
+                  "stateVariable": false,
+                  "storageLocation": "memory",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bytes_memory_ptr",
+                    "typeString": "bytes"
+                  },
+                  "typeName": {
+                    "id": 1486,
+                    "name": "bytes",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "173:5:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bytes_storage_ptr",
+                      "typeString": "bytes"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "141:69:5"
+            },
+            "returnParameters": {
+              "id": 1489,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "225:0:5"
+            },
+            "scope": 1505,
+            "stateMutability": "pure",
+            "virtual": false,
+            "visibility": "internal"
+          }
+        ],
+        "abstract": false,
+        "baseContracts": [],
+        "canonicalName": "LibErrorHandler",
+        "contractDependencies": [],
+        "contractKind": "library",
+        "fullyImplemented": true,
+        "linearizedBaseContracts": [
+          1505
+        ],
+        "name": "LibErrorHandler",
+        "nameLocation": "65:15:5",
+        "scope": 1506,
+        "usedErrors": [
+          1483
+        ],
+        "usedEvents": []
+      }
+    ],
+    "license": "MIT"
+  },
+  "id": 5
+}

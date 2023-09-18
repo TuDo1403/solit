@@ -1,0 +1,1358 @@
+{
+  "abi": [],
+  "bytecode": {
+    "object": "0x",
+    "sourceMap": "",
+    "linkReferences": {}
+  },
+  "deployedBytecode": {
+    "object": "0x",
+    "sourceMap": "",
+    "linkReferences": {}
+  },
+  "methodIdentifiers": {},
+  "rawMetadata": "{\"compiler\":{\"version\":\"0.8.21+commit.d9974bed\"},\"language\":\"Solidity\",\"output\":{\"abi\":[],\"devdoc\":{\"kind\":\"dev\",\"methods\":{},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"lib/forge-std/src/Base.sol\":\"CommonBase\"},\"evmVersion\":\"paris\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\",\"useLiteralContent\":true},\"optimizer\":{\"enabled\":true,\"runs\":1000000},\"remappings\":[\":@openzeppelin/=node_modules/@openzeppelin/\",\":@solit/contracts/=contracts/\",\":contracts-upgradeable/=node_modules/@openzeppelin/contracts-upgradeable/\",\":ds-test/=lib/forge-std/lib/ds-test/src/\",\":eth-gas-reporter/=node_modules/eth-gas-reporter/\",\":forge-std/=lib/forge-std/src/\",\":hardhat/=node_modules/hardhat/\",\":sample-projects/=node_modules/hardhat/sample-projects/\",\":solady/=node_modules/solady/\",\":solmate/=node_modules/solmate/\"]},\"sources\":{\"lib/forge-std/src/Base.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\npragma solidity >=0.6.2 <0.9.0;\\n\\nimport {StdStorage} from \\\"./StdStorage.sol\\\";\\nimport {Vm, VmSafe} from \\\"./Vm.sol\\\";\\n\\nabstract contract CommonBase {\\n    // Cheat code address, 0x7109709ECfa91a80626fF3989D68f67F5b1DD12D.\\n    address internal constant VM_ADDRESS = address(uint160(uint256(keccak256(\\\"hevm cheat code\\\"))));\\n    // console.sol and console2.sol work by executing a staticcall to this address.\\n    address internal constant CONSOLE = 0x000000000000000000636F6e736F6c652e6c6f67;\\n    // Used when deploying with create2, https://github.com/Arachnid/deterministic-deployment-proxy.\\n    address internal constant CREATE2_FACTORY = 0x4e59b44847b379578588920cA78FbF26c0B4956C;\\n    // Default address for tx.origin and msg.sender, 0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38.\\n    address internal constant DEFAULT_SENDER = address(uint160(uint256(keccak256(\\\"foundry default caller\\\"))));\\n    // Address of the test contract, deployed by the DEFAULT_SENDER.\\n    address internal constant DEFAULT_TEST_CONTRACT = 0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f;\\n    // Deterministic deployment address of the Multicall3 contract.\\n    address internal constant MULTICALL3_ADDRESS = 0xcA11bde05977b3631167028862bE2a173976CA11;\\n    // The order of the secp256k1 curve.\\n    uint256 internal constant SECP256K1_ORDER =\\n        115792089237316195423570985008687907852837564279074904382605163141518161494337;\\n\\n    uint256 internal constant UINT256_MAX =\\n        115792089237316195423570985008687907853269984665640564039457584007913129639935;\\n\\n    Vm internal constant vm = Vm(VM_ADDRESS);\\n    StdStorage internal stdstore;\\n}\\n\\nabstract contract TestBase is CommonBase {}\\n\\nabstract contract ScriptBase is CommonBase {\\n    VmSafe internal constant vmSafe = VmSafe(VM_ADDRESS);\\n}\\n\",\"keccak256\":\"0x4ff1a785311017d1eedb1b4737956fa383067ad34eb439abfec1d989754dde1c\",\"license\":\"MIT\"},\"lib/forge-std/src/StdStorage.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\npragma solidity >=0.6.2 <0.9.0;\\n\\nimport {Vm} from \\\"./Vm.sol\\\";\\n\\nstruct StdStorage {\\n    mapping(address => mapping(bytes4 => mapping(bytes32 => uint256))) slots;\\n    mapping(address => mapping(bytes4 => mapping(bytes32 => bool))) finds;\\n    bytes32[] _keys;\\n    bytes4 _sig;\\n    uint256 _depth;\\n    address _target;\\n    bytes32 _set;\\n}\\n\\nlibrary stdStorageSafe {\\n    event SlotFound(address who, bytes4 fsig, bytes32 keysHash, uint256 slot);\\n    event WARNING_UninitedSlot(address who, uint256 slot);\\n\\n    Vm private constant vm = Vm(address(uint160(uint256(keccak256(\\\"hevm cheat code\\\")))));\\n\\n    function sigs(string memory sigStr) internal pure returns (bytes4) {\\n        return bytes4(keccak256(bytes(sigStr)));\\n    }\\n\\n    /// @notice find an arbitrary storage slot given a function sig, input data, address of the contract and a value to check against\\n    // slot complexity:\\n    //  if flat, will be bytes32(uint256(uint));\\n    //  if map, will be keccak256(abi.encode(key, uint(slot)));\\n    //  if deep map, will be keccak256(abi.encode(key1, keccak256(abi.encode(key0, uint(slot)))));\\n    //  if map struct, will be bytes32(uint256(keccak256(abi.encode(key1, keccak256(abi.encode(key0, uint(slot)))))) + structFieldDepth);\\n    function find(StdStorage storage self) internal returns (uint256) {\\n        address who = self._target;\\n        bytes4 fsig = self._sig;\\n        uint256 field_depth = self._depth;\\n        bytes32[] memory ins = self._keys;\\n\\n        // calldata to test against\\n        if (self.finds[who][fsig][keccak256(abi.encodePacked(ins, field_depth))]) {\\n            return self.slots[who][fsig][keccak256(abi.encodePacked(ins, field_depth))];\\n        }\\n        bytes memory cald = abi.encodePacked(fsig, flatten(ins));\\n        vm.record();\\n        bytes32 fdat;\\n        {\\n            (, bytes memory rdat) = who.staticcall(cald);\\n            fdat = bytesToBytes32(rdat, 32 * field_depth);\\n        }\\n\\n        (bytes32[] memory reads,) = vm.accesses(address(who));\\n        if (reads.length == 1) {\\n            bytes32 curr = vm.load(who, reads[0]);\\n            if (curr == bytes32(0)) {\\n                emit WARNING_UninitedSlot(who, uint256(reads[0]));\\n            }\\n            if (fdat != curr) {\\n                require(\\n                    false,\\n                    \\\"stdStorage find(StdStorage): Packed slot. This would cause dangerous overwriting and currently isn't supported.\\\"\\n                );\\n            }\\n            emit SlotFound(who, fsig, keccak256(abi.encodePacked(ins, field_depth)), uint256(reads[0]));\\n            self.slots[who][fsig][keccak256(abi.encodePacked(ins, field_depth))] = uint256(reads[0]);\\n            self.finds[who][fsig][keccak256(abi.encodePacked(ins, field_depth))] = true;\\n        } else if (reads.length > 1) {\\n            for (uint256 i = 0; i < reads.length; i++) {\\n                bytes32 prev = vm.load(who, reads[i]);\\n                if (prev == bytes32(0)) {\\n                    emit WARNING_UninitedSlot(who, uint256(reads[i]));\\n                }\\n                if (prev != fdat) {\\n                    continue;\\n                }\\n                bytes32 new_val = ~prev;\\n                // store\\n                vm.store(who, reads[i], new_val);\\n                bool success;\\n                {\\n                    bytes memory rdat;\\n                    (success, rdat) = who.staticcall(cald);\\n                    fdat = bytesToBytes32(rdat, 32 * field_depth);\\n                }\\n\\n                if (success && fdat == new_val) {\\n                    // we found which of the slots is the actual one\\n                    emit SlotFound(who, fsig, keccak256(abi.encodePacked(ins, field_depth)), uint256(reads[i]));\\n                    self.slots[who][fsig][keccak256(abi.encodePacked(ins, field_depth))] = uint256(reads[i]);\\n                    self.finds[who][fsig][keccak256(abi.encodePacked(ins, field_depth))] = true;\\n                    vm.store(who, reads[i], prev);\\n                    break;\\n                }\\n                vm.store(who, reads[i], prev);\\n            }\\n        } else {\\n            revert(\\\"stdStorage find(StdStorage): No storage use detected for target.\\\");\\n        }\\n\\n        require(\\n            self.finds[who][fsig][keccak256(abi.encodePacked(ins, field_depth))],\\n            \\\"stdStorage find(StdStorage): Slot(s) not found.\\\"\\n        );\\n\\n        delete self._target;\\n        delete self._sig;\\n        delete self._keys;\\n        delete self._depth;\\n\\n        return self.slots[who][fsig][keccak256(abi.encodePacked(ins, field_depth))];\\n    }\\n\\n    function target(StdStorage storage self, address _target) internal returns (StdStorage storage) {\\n        self._target = _target;\\n        return self;\\n    }\\n\\n    function sig(StdStorage storage self, bytes4 _sig) internal returns (StdStorage storage) {\\n        self._sig = _sig;\\n        return self;\\n    }\\n\\n    function sig(StdStorage storage self, string memory _sig) internal returns (StdStorage storage) {\\n        self._sig = sigs(_sig);\\n        return self;\\n    }\\n\\n    function with_key(StdStorage storage self, address who) internal returns (StdStorage storage) {\\n        self._keys.push(bytes32(uint256(uint160(who))));\\n        return self;\\n    }\\n\\n    function with_key(StdStorage storage self, uint256 amt) internal returns (StdStorage storage) {\\n        self._keys.push(bytes32(amt));\\n        return self;\\n    }\\n\\n    function with_key(StdStorage storage self, bytes32 key) internal returns (StdStorage storage) {\\n        self._keys.push(key);\\n        return self;\\n    }\\n\\n    function depth(StdStorage storage self, uint256 _depth) internal returns (StdStorage storage) {\\n        self._depth = _depth;\\n        return self;\\n    }\\n\\n    function read(StdStorage storage self) private returns (bytes memory) {\\n        address t = self._target;\\n        uint256 s = find(self);\\n        return abi.encode(vm.load(t, bytes32(s)));\\n    }\\n\\n    function read_bytes32(StdStorage storage self) internal returns (bytes32) {\\n        return abi.decode(read(self), (bytes32));\\n    }\\n\\n    function read_bool(StdStorage storage self) internal returns (bool) {\\n        int256 v = read_int(self);\\n        if (v == 0) return false;\\n        if (v == 1) return true;\\n        revert(\\\"stdStorage read_bool(StdStorage): Cannot decode. Make sure you are reading a bool.\\\");\\n    }\\n\\n    function read_address(StdStorage storage self) internal returns (address) {\\n        return abi.decode(read(self), (address));\\n    }\\n\\n    function read_uint(StdStorage storage self) internal returns (uint256) {\\n        return abi.decode(read(self), (uint256));\\n    }\\n\\n    function read_int(StdStorage storage self) internal returns (int256) {\\n        return abi.decode(read(self), (int256));\\n    }\\n\\n    function parent(StdStorage storage self) internal returns (uint256, bytes32) {\\n        address who = self._target;\\n        uint256 field_depth = self._depth;\\n        vm.startMappingRecording();\\n        uint256 child = find(self) - field_depth;\\n        (bool found, bytes32 key, bytes32 parent_slot) = vm.getMappingKeyAndParentOf(who, bytes32(child));\\n        if (!found) {\\n            revert(\\n                \\\"stdStorage read_bool(StdStorage): Cannot find parent. Make sure you give a slot and startMappingRecording() has been called.\\\"\\n            );\\n        }\\n        return (uint256(parent_slot), key);\\n    }\\n\\n    function root(StdStorage storage self) internal returns (uint256) {\\n        address who = self._target;\\n        uint256 field_depth = self._depth;\\n        vm.startMappingRecording();\\n        uint256 child = find(self) - field_depth;\\n        bool found;\\n        bytes32 root_slot;\\n        bytes32 parent_slot;\\n        (found,, parent_slot) = vm.getMappingKeyAndParentOf(who, bytes32(child));\\n        if (!found) {\\n            revert(\\n                \\\"stdStorage read_bool(StdStorage): Cannot find parent. Make sure you give a slot and startMappingRecording() has been called.\\\"\\n            );\\n        }\\n        while (found) {\\n            root_slot = parent_slot;\\n            (found,, parent_slot) = vm.getMappingKeyAndParentOf(who, bytes32(root_slot));\\n        }\\n        return uint256(root_slot);\\n    }\\n\\n    function bytesToBytes32(bytes memory b, uint256 offset) private pure returns (bytes32) {\\n        bytes32 out;\\n\\n        uint256 max = b.length > 32 ? 32 : b.length;\\n        for (uint256 i = 0; i < max; i++) {\\n            out |= bytes32(b[offset + i] & 0xFF) >> (i * 8);\\n        }\\n        return out;\\n    }\\n\\n    function flatten(bytes32[] memory b) private pure returns (bytes memory) {\\n        bytes memory result = new bytes(b.length * 32);\\n        for (uint256 i = 0; i < b.length; i++) {\\n            bytes32 k = b[i];\\n            /// @solidity memory-safe-assembly\\n            assembly {\\n                mstore(add(result, add(32, mul(32, i))), k)\\n            }\\n        }\\n\\n        return result;\\n    }\\n}\\n\\nlibrary stdStorage {\\n    Vm private constant vm = Vm(address(uint160(uint256(keccak256(\\\"hevm cheat code\\\")))));\\n\\n    function sigs(string memory sigStr) internal pure returns (bytes4) {\\n        return stdStorageSafe.sigs(sigStr);\\n    }\\n\\n    function find(StdStorage storage self) internal returns (uint256) {\\n        return stdStorageSafe.find(self);\\n    }\\n\\n    function target(StdStorage storage self, address _target) internal returns (StdStorage storage) {\\n        return stdStorageSafe.target(self, _target);\\n    }\\n\\n    function sig(StdStorage storage self, bytes4 _sig) internal returns (StdStorage storage) {\\n        return stdStorageSafe.sig(self, _sig);\\n    }\\n\\n    function sig(StdStorage storage self, string memory _sig) internal returns (StdStorage storage) {\\n        return stdStorageSafe.sig(self, _sig);\\n    }\\n\\n    function with_key(StdStorage storage self, address who) internal returns (StdStorage storage) {\\n        return stdStorageSafe.with_key(self, who);\\n    }\\n\\n    function with_key(StdStorage storage self, uint256 amt) internal returns (StdStorage storage) {\\n        return stdStorageSafe.with_key(self, amt);\\n    }\\n\\n    function with_key(StdStorage storage self, bytes32 key) internal returns (StdStorage storage) {\\n        return stdStorageSafe.with_key(self, key);\\n    }\\n\\n    function depth(StdStorage storage self, uint256 _depth) internal returns (StdStorage storage) {\\n        return stdStorageSafe.depth(self, _depth);\\n    }\\n\\n    function checked_write(StdStorage storage self, address who) internal {\\n        checked_write(self, bytes32(uint256(uint160(who))));\\n    }\\n\\n    function checked_write(StdStorage storage self, uint256 amt) internal {\\n        checked_write(self, bytes32(amt));\\n    }\\n\\n    function checked_write_int(StdStorage storage self, int256 val) internal {\\n        checked_write(self, bytes32(uint256(val)));\\n    }\\n\\n    function checked_write(StdStorage storage self, bool write) internal {\\n        bytes32 t;\\n        /// @solidity memory-safe-assembly\\n        assembly {\\n            t := write\\n        }\\n        checked_write(self, t);\\n    }\\n\\n    function checked_write(StdStorage storage self, bytes32 set) internal {\\n        address who = self._target;\\n        bytes4 fsig = self._sig;\\n        uint256 field_depth = self._depth;\\n        bytes32[] memory ins = self._keys;\\n\\n        bytes memory cald = abi.encodePacked(fsig, flatten(ins));\\n        if (!self.finds[who][fsig][keccak256(abi.encodePacked(ins, field_depth))]) {\\n            find(self);\\n        }\\n        bytes32 slot = bytes32(self.slots[who][fsig][keccak256(abi.encodePacked(ins, field_depth))]);\\n\\n        bytes32 fdat;\\n        {\\n            (, bytes memory rdat) = who.staticcall(cald);\\n            fdat = bytesToBytes32(rdat, 32 * field_depth);\\n        }\\n        bytes32 curr = vm.load(who, slot);\\n\\n        if (fdat != curr) {\\n            require(\\n                false,\\n                \\\"stdStorage find(StdStorage): Packed slot. This would cause dangerous overwriting and currently isn't supported.\\\"\\n            );\\n        }\\n        vm.store(who, slot, set);\\n        delete self._target;\\n        delete self._sig;\\n        delete self._keys;\\n        delete self._depth;\\n    }\\n\\n    function read_bytes32(StdStorage storage self) internal returns (bytes32) {\\n        return stdStorageSafe.read_bytes32(self);\\n    }\\n\\n    function read_bool(StdStorage storage self) internal returns (bool) {\\n        return stdStorageSafe.read_bool(self);\\n    }\\n\\n    function read_address(StdStorage storage self) internal returns (address) {\\n        return stdStorageSafe.read_address(self);\\n    }\\n\\n    function read_uint(StdStorage storage self) internal returns (uint256) {\\n        return stdStorageSafe.read_uint(self);\\n    }\\n\\n    function read_int(StdStorage storage self) internal returns (int256) {\\n        return stdStorageSafe.read_int(self);\\n    }\\n\\n    function parent(StdStorage storage self) internal returns (uint256, bytes32) {\\n        return stdStorageSafe.parent(self);\\n    }\\n\\n    function root(StdStorage storage self) internal returns (uint256) {\\n        return stdStorageSafe.root(self);\\n    }\\n\\n    // Private function so needs to be copied over\\n    function bytesToBytes32(bytes memory b, uint256 offset) private pure returns (bytes32) {\\n        bytes32 out;\\n\\n        uint256 max = b.length > 32 ? 32 : b.length;\\n        for (uint256 i = 0; i < max; i++) {\\n            out |= bytes32(b[offset + i] & 0xFF) >> (i * 8);\\n        }\\n        return out;\\n    }\\n\\n    // Private function so needs to be copied over\\n    function flatten(bytes32[] memory b) private pure returns (bytes memory) {\\n        bytes memory result = new bytes(b.length * 32);\\n        for (uint256 i = 0; i < b.length; i++) {\\n            bytes32 k = b[i];\\n            /// @solidity memory-safe-assembly\\n            assembly {\\n                mstore(add(result, add(32, mul(32, i))), k)\\n            }\\n        }\\n\\n        return result;\\n    }\\n}\\n\",\"keccak256\":\"0x4298f3f4cedaedb07029820b1daad2c03af45379559392201f7bf3ec71105811\",\"license\":\"MIT\"},\"lib/forge-std/src/Vm.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\npragma solidity >=0.6.2 <0.9.0;\\n\\npragma experimental ABIEncoderV2;\\n\\n// Cheatcodes are marked as view/pure/none using the following rules:\\n// 0. A call's observable behaviour includes its return value, logs, reverts and state writes,\\n// 1. If you can influence a later call's observable behaviour, you're neither `view` nor `pure (you are modifying some state be it the EVM, interpreter, filesystem, etc),\\n// 2. Otherwise if you can be influenced by an earlier call, or if reading some state, you're `view`,\\n// 3. Otherwise you're `pure`.\\n\\ninterface VmSafe {\\n    enum CallerMode {\\n        None,\\n        Broadcast,\\n        RecurrentBroadcast,\\n        Prank,\\n        RecurrentPrank\\n    }\\n\\n    struct Log {\\n        bytes32[] topics;\\n        bytes data;\\n        address emitter;\\n    }\\n\\n    struct Rpc {\\n        string key;\\n        string url;\\n    }\\n\\n    struct DirEntry {\\n        string errorMessage;\\n        string path;\\n        uint64 depth;\\n        bool isDir;\\n        bool isSymlink;\\n    }\\n\\n    struct FsMetadata {\\n        bool isDir;\\n        bool isSymlink;\\n        uint256 length;\\n        bool readOnly;\\n        uint256 modified;\\n        uint256 accessed;\\n        uint256 created;\\n    }\\n\\n    struct Wallet {\\n        address addr;\\n        uint256 publicKeyX;\\n        uint256 publicKeyY;\\n        uint256 privateKey;\\n    }\\n\\n    struct FfiResult {\\n        int32 exit_code;\\n        bytes stdout;\\n        bytes stderr;\\n    }\\n\\n    // Derives a private key from the name, labels the account with that name, and returns the wallet\\n    function createWallet(string calldata walletLabel) external returns (Wallet memory wallet);\\n    // Generates a wallet from the private key and returns the wallet\\n    function createWallet(uint256 privateKey) external returns (Wallet memory wallet);\\n    // Generates a wallet from the private key, labels the account with that name, and returns the wallet\\n    function createWallet(uint256 privateKey, string calldata walletLabel) external returns (Wallet memory wallet);\\n    // Signs data, (Wallet, digest) => (v, r, s)\\n    function sign(Wallet calldata wallet, bytes32 digest) external returns (uint8 v, bytes32 r, bytes32 s);\\n    // Get nonce for a Wallet\\n    function getNonce(Wallet calldata wallet) external returns (uint64 nonce);\\n\\n    // Loads a storage slot from an address\\n    function load(address target, bytes32 slot) external view returns (bytes32 data);\\n    // Signs data\\n    function sign(uint256 privateKey, bytes32 digest) external pure returns (uint8 v, bytes32 r, bytes32 s);\\n    // Gets the address for a given private key\\n    function addr(uint256 privateKey) external pure returns (address keyAddr);\\n    // Gets the nonce of an account\\n    function getNonce(address account) external view returns (uint64 nonce);\\n    // Performs a foreign function call via the terminal\\n    function ffi(string[] calldata commandInput) external returns (bytes memory result);\\n    // Performs a foreign function call via terminal and returns the exit code, stdout, and stderr\\n    function tryFfi(string[] calldata commandInput) external returns (FfiResult memory result);\\n    // Sets environment variables\\n    function setEnv(string calldata name, string calldata value) external;\\n    // Reads environment variables, (name) => (value)\\n    function envBool(string calldata name) external view returns (bool value);\\n    function envUint(string calldata name) external view returns (uint256 value);\\n    function envInt(string calldata name) external view returns (int256 value);\\n    function envAddress(string calldata name) external view returns (address value);\\n    function envBytes32(string calldata name) external view returns (bytes32 value);\\n    function envString(string calldata name) external view returns (string memory value);\\n    function envBytes(string calldata name) external view returns (bytes memory value);\\n    // Reads environment variables as arrays\\n    function envBool(string calldata name, string calldata delim) external view returns (bool[] memory value);\\n    function envUint(string calldata name, string calldata delim) external view returns (uint256[] memory value);\\n    function envInt(string calldata name, string calldata delim) external view returns (int256[] memory value);\\n    function envAddress(string calldata name, string calldata delim) external view returns (address[] memory value);\\n    function envBytes32(string calldata name, string calldata delim) external view returns (bytes32[] memory value);\\n    function envString(string calldata name, string calldata delim) external view returns (string[] memory value);\\n    function envBytes(string calldata name, string calldata delim) external view returns (bytes[] memory value);\\n    // Read environment variables with default value\\n    function envOr(string calldata name, bool defaultValue) external returns (bool value);\\n    function envOr(string calldata name, uint256 defaultValue) external returns (uint256 value);\\n    function envOr(string calldata name, int256 defaultValue) external returns (int256 value);\\n    function envOr(string calldata name, address defaultValue) external returns (address value);\\n    function envOr(string calldata name, bytes32 defaultValue) external returns (bytes32 value);\\n    function envOr(string calldata name, string calldata defaultValue) external returns (string memory value);\\n    function envOr(string calldata name, bytes calldata defaultValue) external returns (bytes memory value);\\n    // Read environment variables as arrays with default value\\n    function envOr(string calldata name, string calldata delim, bool[] calldata defaultValue)\\n        external\\n        returns (bool[] memory value);\\n    function envOr(string calldata name, string calldata delim, uint256[] calldata defaultValue)\\n        external\\n        returns (uint256[] memory value);\\n    function envOr(string calldata name, string calldata delim, int256[] calldata defaultValue)\\n        external\\n        returns (int256[] memory value);\\n    function envOr(string calldata name, string calldata delim, address[] calldata defaultValue)\\n        external\\n        returns (address[] memory value);\\n    function envOr(string calldata name, string calldata delim, bytes32[] calldata defaultValue)\\n        external\\n        returns (bytes32[] memory value);\\n    function envOr(string calldata name, string calldata delim, string[] calldata defaultValue)\\n        external\\n        returns (string[] memory value);\\n    function envOr(string calldata name, string calldata delim, bytes[] calldata defaultValue)\\n        external\\n        returns (bytes[] memory value);\\n    // Records all storage reads and writes\\n    function record() external;\\n    // Gets all accessed reads and write slot from a recording session, for a given address\\n    function accesses(address target) external returns (bytes32[] memory readSlots, bytes32[] memory writeSlots);\\n    // Gets the _creation_ bytecode from an artifact file. Takes in the relative path to the json file\\n    function getCode(string calldata artifactPath) external view returns (bytes memory creationBytecode);\\n    // Gets the _deployed_ bytecode from an artifact file. Takes in the relative path to the json file\\n    function getDeployedCode(string calldata artifactPath) external view returns (bytes memory runtimeBytecode);\\n    // Labels an address in call traces\\n    function label(address account, string calldata newLabel) external;\\n    // Gets the label for the specified address\\n    function getLabel(address account) external returns (string memory currentLabel);\\n    // Using the address that calls the test contract, has the next call (at this call depth only) create a transaction that can later be signed and sent onchain\\n    function broadcast() external;\\n    // Has the next call (at this call depth only) create a transaction with the address provided as the sender that can later be signed and sent onchain\\n    function broadcast(address signer) external;\\n    // Has the next call (at this call depth only) create a transaction with the private key provided as the sender that can later be signed and sent onchain\\n    function broadcast(uint256 privateKey) external;\\n    // Using the address that calls the test contract, has all subsequent calls (at this call depth only) create transactions that can later be signed and sent onchain\\n    function startBroadcast() external;\\n    // Has all subsequent calls (at this call depth only) create transactions with the address provided that can later be signed and sent onchain\\n    function startBroadcast(address signer) external;\\n    // Has all subsequent calls (at this call depth only) create transactions with the private key provided that can later be signed and sent onchain\\n    function startBroadcast(uint256 privateKey) external;\\n    // Stops collecting onchain transactions\\n    function stopBroadcast() external;\\n\\n    // Get the path of the current project root.\\n    function projectRoot() external view returns (string memory path);\\n    // Reads the entire content of file to string. `path` is relative to the project root.\\n    function readFile(string calldata path) external view returns (string memory data);\\n    // Reads the entire content of file as binary. `path` is relative to the project root.\\n    function readFileBinary(string calldata path) external view returns (bytes memory data);\\n    // Reads next line of file to string.\\n    function readLine(string calldata path) external view returns (string memory line);\\n    // Writes data to file, creating a file if it does not exist, and entirely replacing its contents if it does.\\n    // `path` is relative to the project root.\\n    function writeFile(string calldata path, string calldata data) external;\\n    // Writes binary data to a file, creating a file if it does not exist, and entirely replacing its contents if it does.\\n    // `path` is relative to the project root.\\n    function writeFileBinary(string calldata path, bytes calldata data) external;\\n    // Writes line to file, creating a file if it does not exist.\\n    // `path` is relative to the project root.\\n    function writeLine(string calldata path, string calldata data) external;\\n    // Copies the contents of one file to another. This function will **overwrite** the contents of `to`.\\n    // On success, the total number of bytes copied is returned and it is equal to the length of the `to` file as reported by `metadata`.\\n    // Both `from` and `to` are relative to the project root.\\n    function copyFile(string calldata from, string calldata to) external returns (uint64 copied);\\n    // Closes file for reading, resetting the offset and allowing to read it from beginning with readLine.\\n    // `path` is relative to the project root.\\n    function closeFile(string calldata path) external;\\n    // Removes a file from the filesystem.\\n    // This cheatcode will revert in the following situations, but is not limited to just these cases:\\n    // - `path` points to a directory.\\n    // - The file doesn't exist.\\n    // - The user lacks permissions to remove the file.\\n    // `path` is relative to the project root.\\n    function removeFile(string calldata path) external;\\n    // Creates a new, empty directory at the provided path.\\n    // This cheatcode will revert in the following situations, but is not limited to just these cases:\\n    // - User lacks permissions to modify `path`.\\n    // - A parent of the given path doesn't exist and `recursive` is false.\\n    // - `path` already exists and `recursive` is false.\\n    // `path` is relative to the project root.\\n    function createDir(string calldata path, bool recursive) external;\\n    // Removes a directory at the provided path.\\n    // This cheatcode will revert in the following situations, but is not limited to just these cases:\\n    // - `path` doesn't exist.\\n    // - `path` isn't a directory.\\n    // - User lacks permissions to modify `path`.\\n    // - The directory is not empty and `recursive` is false.\\n    // `path` is relative to the project root.\\n    function removeDir(string calldata path, bool recursive) external;\\n    // Reads the directory at the given path recursively, up to `max_depth`.\\n    // `max_depth` defaults to 1, meaning only the direct children of the given directory will be returned.\\n    // Follows symbolic links if `follow_links` is true.\\n    function readDir(string calldata path) external view returns (DirEntry[] memory entries);\\n    function readDir(string calldata path, uint64 maxDepth) external view returns (DirEntry[] memory entries);\\n    function readDir(string calldata path, uint64 maxDepth, bool followLinks)\\n        external\\n        view\\n        returns (DirEntry[] memory entries);\\n    // Reads a symbolic link, returning the path that the link points to.\\n    // This cheatcode will revert in the following situations, but is not limited to just these cases:\\n    // - `path` is not a symbolic link.\\n    // - `path` does not exist.\\n    function readLink(string calldata linkPath) external view returns (string memory targetPath);\\n    // Given a path, query the file system to get information about a file, directory, etc.\\n    function fsMetadata(string calldata path) external view returns (FsMetadata memory metadata);\\n    // Returns true if the given path points to an existing entity, else returns false\\n    function exists(string calldata path) external returns (bool result);\\n    // Returns true if the path exists on disk and is pointing at a regular file, else returns false\\n    function isFile(string calldata path) external returns (bool result);\\n    // Returns true if the path exists on disk and is pointing at a directory, else returns false\\n    function isDir(string calldata path) external returns (bool result);\\n\\n    // Convert values to a string\\n    function toString(address value) external pure returns (string memory stringifiedValue);\\n    function toString(bytes calldata value) external pure returns (string memory stringifiedValue);\\n    function toString(bytes32 value) external pure returns (string memory stringifiedValue);\\n    function toString(bool value) external pure returns (string memory stringifiedValue);\\n    function toString(uint256 value) external pure returns (string memory stringifiedValue);\\n    function toString(int256 value) external pure returns (string memory stringifiedValue);\\n    // Convert values from a string\\n    function parseBytes(string calldata stringifiedValue) external pure returns (bytes memory parsedValue);\\n    function parseAddress(string calldata stringifiedValue) external pure returns (address parsedValue);\\n    function parseUint(string calldata stringifiedValue) external pure returns (uint256 parsedValue);\\n    function parseInt(string calldata stringifiedValue) external pure returns (int256 parsedValue);\\n    function parseBytes32(string calldata stringifiedValue) external pure returns (bytes32 parsedValue);\\n    function parseBool(string calldata stringifiedValue) external pure returns (bool parsedValue);\\n    // Record all the transaction logs\\n    function recordLogs() external;\\n    // Gets all the recorded logs\\n    function getRecordedLogs() external returns (Log[] memory logs);\\n    // Derive a private key from a provided mnenomic string (or mnenomic file path) at the derivation path m/44'/60'/0'/0/{index}\\n    function deriveKey(string calldata mnemonic, uint32 index) external pure returns (uint256 privateKey);\\n    // Derive a private key from a provided mnenomic string (or mnenomic file path) at {derivationPath}{index}\\n    function deriveKey(string calldata mnemonic, string calldata derivationPath, uint32 index)\\n        external\\n        pure\\n        returns (uint256 privateKey);\\n    // Adds a private key to the local forge wallet and returns the address\\n    function rememberKey(uint256 privateKey) external returns (address keyAddr);\\n    //\\n    // parseJson\\n    //\\n    // ----\\n    // In case the returned value is a JSON object, it's encoded as a ABI-encoded tuple. As JSON objects\\n    // don't have the notion of ordered, but tuples do, they JSON object is encoded with it's fields ordered in\\n    // ALPHABETICAL order. That means that in order to successfully decode the tuple, we need to define a tuple that\\n    // encodes the fields in the same order, which is alphabetical. In the case of Solidity structs, they are encoded\\n    // as tuples, with the attributes in the order in which they are defined.\\n    // For example: json = { 'a': 1, 'b': 0xa4tb......3xs}\\n    // a: uint256\\n    // b: address\\n    // To decode that json, we need to define a struct or a tuple as follows:\\n    // struct json = { uint256 a; address b; }\\n    // If we defined a json struct with the opposite order, meaning placing the address b first, it would try to\\n    // decode the tuple in that order, and thus fail.\\n    // ----\\n    // Given a string of JSON, return it as ABI-encoded\\n    function parseJson(string calldata json, string calldata key) external pure returns (bytes memory abiEncodedData);\\n    function parseJson(string calldata json) external pure returns (bytes memory abiEncodedData);\\n\\n    // The following parseJson cheatcodes will do type coercion, for the type that they indicate.\\n    // For example, parseJsonUint will coerce all values to a uint256. That includes stringified numbers '12'\\n    // and hex numbers '0xEF'.\\n    // Type coercion works ONLY for discrete values or arrays. That means that the key must return a value or array, not\\n    // a JSON object.\\n    function parseJsonUint(string calldata json, string calldata key) external pure returns (uint256);\\n    function parseJsonUintArray(string calldata json, string calldata key) external pure returns (uint256[] memory);\\n    function parseJsonInt(string calldata json, string calldata key) external pure returns (int256);\\n    function parseJsonIntArray(string calldata json, string calldata key) external pure returns (int256[] memory);\\n    function parseJsonBool(string calldata json, string calldata key) external pure returns (bool);\\n    function parseJsonBoolArray(string calldata json, string calldata key) external pure returns (bool[] memory);\\n    function parseJsonAddress(string calldata json, string calldata key) external pure returns (address);\\n    function parseJsonAddressArray(string calldata json, string calldata key)\\n        external\\n        pure\\n        returns (address[] memory);\\n    function parseJsonString(string calldata json, string calldata key) external pure returns (string memory);\\n    function parseJsonStringArray(string calldata json, string calldata key) external pure returns (string[] memory);\\n    function parseJsonBytes(string calldata json, string calldata key) external pure returns (bytes memory);\\n    function parseJsonBytesArray(string calldata json, string calldata key) external pure returns (bytes[] memory);\\n    function parseJsonBytes32(string calldata json, string calldata key) external pure returns (bytes32);\\n    function parseJsonBytes32Array(string calldata json, string calldata key)\\n        external\\n        pure\\n        returns (bytes32[] memory);\\n\\n    // Checks if a key exists in a JSON or TOML object.\\n    function keyExists(string calldata json, string calldata key) external view returns (bool);\\n\\n    // Returns array of keys for a JSON object\\n    function parseJsonKeys(string calldata json, string calldata key) external returns (string[] memory keys);\\n\\n    // Serialize a key and value to a JSON object stored in-memory that can be later written to a file\\n    // It returns the stringified version of the specific JSON file up to that moment.\\n    function serializeJson(string calldata objectKey, string calldata value) external returns (string memory json);\\n    function serializeBool(string calldata objectKey, string calldata valueKey, bool value)\\n        external\\n        returns (string memory json);\\n    function serializeUint(string calldata objectKey, string calldata valueKey, uint256 value)\\n        external\\n        returns (string memory json);\\n    function serializeInt(string calldata objectKey, string calldata valueKey, int256 value)\\n        external\\n        returns (string memory json);\\n    function serializeAddress(string calldata objectKey, string calldata valueKey, address value)\\n        external\\n        returns (string memory json);\\n    function serializeBytes32(string calldata objectKey, string calldata valueKey, bytes32 value)\\n        external\\n        returns (string memory json);\\n    function serializeString(string calldata objectKey, string calldata valueKey, string calldata value)\\n        external\\n        returns (string memory json);\\n    function serializeBytes(string calldata objectKey, string calldata valueKey, bytes calldata value)\\n        external\\n        returns (string memory json);\\n\\n    function serializeBool(string calldata objectKey, string calldata valueKey, bool[] calldata values)\\n        external\\n        returns (string memory json);\\n    function serializeUint(string calldata objectKey, string calldata valueKey, uint256[] calldata values)\\n        external\\n        returns (string memory json);\\n    function serializeInt(string calldata objectKey, string calldata valueKey, int256[] calldata values)\\n        external\\n        returns (string memory json);\\n    function serializeAddress(string calldata objectKey, string calldata valueKey, address[] calldata values)\\n        external\\n        returns (string memory json);\\n    function serializeBytes32(string calldata objectKey, string calldata valueKey, bytes32[] calldata values)\\n        external\\n        returns (string memory json);\\n    function serializeString(string calldata objectKey, string calldata valueKey, string[] calldata values)\\n        external\\n        returns (string memory json);\\n    function serializeBytes(string calldata objectKey, string calldata valueKey, bytes[] calldata values)\\n        external\\n        returns (string memory json);\\n\\n    //\\n    // writeJson\\n    //\\n    // ----\\n    // Write a serialized JSON object to a file. If the file exists, it will be overwritten.\\n    // Let's assume we want to write the following JSON to a file:\\n    //\\n    // { \\\"boolean\\\": true, \\\"number\\\": 342, \\\"object\\\": { \\\"title\\\": \\\"finally json serialization\\\" } }\\n    //\\n    // ```\\n    //  string memory json1 = \\\"some key\\\";\\n    //  vm.serializeBool(json1, \\\"boolean\\\", true);\\n    //  vm.serializeBool(json1, \\\"number\\\", uint256(342));\\n    //  json2 = \\\"some other key\\\";\\n    //  string memory output = vm.serializeString(json2, \\\"title\\\", \\\"finally json serialization\\\");\\n    //  string memory finalJson = vm.serialize(json1, \\\"object\\\", output);\\n    //  vm.writeJson(finalJson, \\\"./output/example.json\\\");\\n    // ```\\n    // The critical insight is that every invocation of serialization will return the stringified version of the JSON\\n    // up to that point. That means we can construct arbitrary JSON objects and then use the return stringified version\\n    // to serialize them as values to another JSON object.\\n    //\\n    // json1 and json2 are simply keys used by the backend to keep track of the objects. So vm.serializeJson(json1,..)\\n    // will find the object in-memory that is keyed by \\\"some key\\\".\\n    function writeJson(string calldata json, string calldata path) external;\\n    // Write a serialized JSON object to an **existing** JSON file, replacing a value with key = <value_key>\\n    // This is useful to replace a specific value of a JSON file, without having to parse the entire thing\\n    function writeJson(string calldata json, string calldata path, string calldata valueKey) external;\\n    // Returns the RPC url for the given alias\\n    function rpcUrl(string calldata rpcAlias) external view returns (string memory json);\\n    // Returns all rpc urls and their aliases `[alias, url][]`\\n    function rpcUrls() external view returns (string[2][] memory urls);\\n    // Returns all rpc urls and their aliases as structs.\\n    function rpcUrlStructs() external view returns (Rpc[] memory urls);\\n    // If the condition is false, discard this run's fuzz inputs and generate new ones.\\n    function assume(bool condition) external pure;\\n    // Pauses gas metering (i.e. gas usage is not counted). Noop if already paused.\\n    function pauseGasMetering() external;\\n    // Resumes gas metering (i.e. gas usage is counted again). Noop if already on.\\n    function resumeGasMetering() external;\\n    // Starts recording all map SSTOREs for later retrieval.\\n    function startMappingRecording() external;\\n    // Stops recording all map SSTOREs for later retrieval and clears the recorded data.\\n    function stopMappingRecording() external;\\n    // Gets the number of elements in the mapping at the given slot, for a given address.\\n    function getMappingLength(address target, bytes32 mappingSlot) external returns (uint256 length);\\n    // Gets the elements at index idx of the mapping at the given slot, for a given address. The\\n    // index must be less than the length of the mapping (i.e. the number of keys in the mapping).\\n    function getMappingSlotAt(address target, bytes32 mappingSlot, uint256 idx) external returns (bytes32 value);\\n    // Gets the map key and parent of a mapping at a given slot, for a given address.\\n    function getMappingKeyAndParentOf(address target, bytes32 elementSlot)\\n        external\\n        returns (bool found, bytes32 key, bytes32 parent);\\n    // Writes a breakpoint to jump to in the debugger\\n    function breakpoint(string calldata char) external;\\n    // Writes a conditional breakpoint to jump to in the debugger\\n    function breakpoint(string calldata char, bool value) external;\\n    // Suspends execution of the main thread for `duration` milliseconds\\n    function sleep(uint256 duration) external;\\n}\\n\\ninterface Vm is VmSafe {\\n    // Sets block.timestamp\\n    function warp(uint256 newTimestamp) external;\\n    // Sets block.height\\n    function roll(uint256 newHeight) external;\\n    // Sets block.basefee\\n    function fee(uint256 newBasefee) external;\\n    // Sets block.difficulty\\n    // Not available on EVM versions from Paris onwards. Use `prevrandao` instead.\\n    // If used on unsupported EVM versions it will revert.\\n    function difficulty(uint256 newDifficulty) external;\\n    // Sets block.prevrandao\\n    // Not available on EVM versions before Paris. Use `difficulty` instead.\\n    // If used on unsupported EVM versions it will revert.\\n    function prevrandao(bytes32 newPrevrandao) external;\\n    // Sets block.chainid\\n    function chainId(uint256 newChainId) external;\\n    // Sets tx.gasprice\\n    function txGasPrice(uint256 newGasPrice) external;\\n    // Stores a value to an address' storage slot.\\n    function store(address target, bytes32 slot, bytes32 value) external;\\n    // Sets the nonce of an account; must be higher than the current nonce of the account\\n    function setNonce(address account, uint64 newNonce) external;\\n    // Sets the nonce of an account to an arbitrary value\\n    function setNonceUnsafe(address account, uint64 newNonce) external;\\n    // Resets the nonce of an account to 0 for EOAs and 1 for contract accounts\\n    function resetNonce(address account) external;\\n    // Sets the *next* call's msg.sender to be the input address\\n    function prank(address msgSender) external;\\n    // Sets all subsequent calls' msg.sender to be the input address until `stopPrank` is called\\n    function startPrank(address msgSender) external;\\n    // Sets the *next* call's msg.sender to be the input address, and the tx.origin to be the second input\\n    function prank(address msgSender, address txOrigin) external;\\n    // Sets all subsequent calls' msg.sender to be the input address until `stopPrank` is called, and the tx.origin to be the second input\\n    function startPrank(address msgSender, address txOrigin) external;\\n    // Resets subsequent calls' msg.sender to be `address(this)`\\n    function stopPrank() external;\\n    // Reads the current `msg.sender` and `tx.origin` from state and reports if there is any active caller modification\\n    function readCallers() external returns (CallerMode callerMode, address msgSender, address txOrigin);\\n    // Sets an address' balance\\n    function deal(address account, uint256 newBalance) external;\\n    // Sets an address' code\\n    function etch(address target, bytes calldata newRuntimeBytecode) external;\\n    // Marks a test as skipped. Must be called at the top of the test.\\n    function skip(bool skipTest) external;\\n    // Expects an error on next call\\n    function expectRevert(bytes calldata revertData) external;\\n    function expectRevert(bytes4 revertData) external;\\n    function expectRevert() external;\\n\\n    // Prepare an expected log with all four checks enabled.\\n    // Call this function, then emit an event, then call a function. Internally after the call, we check if\\n    // logs were emitted in the expected order with the expected topics and data.\\n    // Second form also checks supplied address against emitting contract.\\n    function expectEmit() external;\\n    function expectEmit(address emitter) external;\\n\\n    // Prepare an expected log with (bool checkTopic1, bool checkTopic2, bool checkTopic3, bool checkData).\\n    // Call this function, then emit an event, then call a function. Internally after the call, we check if\\n    // logs were emitted in the expected order with the expected topics and data (as specified by the booleans).\\n    // Second form also checks supplied address against emitting contract.\\n    function expectEmit(bool checkTopic1, bool checkTopic2, bool checkTopic3, bool checkData) external;\\n    function expectEmit(bool checkTopic1, bool checkTopic2, bool checkTopic3, bool checkData, address emitter)\\n        external;\\n\\n    // Mocks a call to an address, returning specified data.\\n    // Calldata can either be strict or a partial match, e.g. if you only\\n    // pass a Solidity selector to the expected calldata, then the entire Solidity\\n    // function will be mocked.\\n    function mockCall(address callee, bytes calldata data, bytes calldata returnData) external;\\n    // Mocks a call to an address with a specific msg.value, returning specified data.\\n    // Calldata match takes precedence over msg.value in case of ambiguity.\\n    function mockCall(address callee, uint256 msgValue, bytes calldata data, bytes calldata returnData) external;\\n    // Reverts a call to an address with specified revert data.\\n    function mockCallRevert(address callee, bytes calldata data, bytes calldata revertData) external;\\n    // Reverts a call to an address with a specific msg.value, with specified revert data.\\n    function mockCallRevert(address callee, uint256 msgValue, bytes calldata data, bytes calldata revertData)\\n        external;\\n    // Clears all mocked calls\\n    function clearMockedCalls() external;\\n    // Expects a call to an address with the specified calldata.\\n    // Calldata can either be a strict or a partial match\\n    function expectCall(address callee, bytes calldata data) external;\\n    // Expects given number of calls to an address with the specified calldata.\\n    function expectCall(address callee, bytes calldata data, uint64 count) external;\\n    // Expects a call to an address with the specified msg.value and calldata\\n    function expectCall(address callee, uint256 msgValue, bytes calldata data) external;\\n    // Expects given number of calls to an address with the specified msg.value and calldata\\n    function expectCall(address callee, uint256 msgValue, bytes calldata data, uint64 count) external;\\n    // Expect a call to an address with the specified msg.value, gas, and calldata.\\n    function expectCall(address callee, uint256 msgValue, uint64 gas, bytes calldata data) external;\\n    // Expects given number of calls to an address with the specified msg.value, gas, and calldata.\\n    function expectCall(address callee, uint256 msgValue, uint64 gas, bytes calldata data, uint64 count) external;\\n    // Expect a call to an address with the specified msg.value and calldata, and a *minimum* amount of gas.\\n    function expectCallMinGas(address callee, uint256 msgValue, uint64 minGas, bytes calldata data) external;\\n    // Expect given number of calls to an address with the specified msg.value and calldata, and a *minimum* amount of gas.\\n    function expectCallMinGas(address callee, uint256 msgValue, uint64 minGas, bytes calldata data, uint64 count)\\n        external;\\n    // Only allows memory writes to offsets [0x00, 0x60) \\u222a [min, max) in the current subcontext. If any other\\n    // memory is written to, the test will fail. Can be called multiple times to add more ranges to the set.\\n    function expectSafeMemory(uint64 min, uint64 max) external;\\n    // Only allows memory writes to offsets [0x00, 0x60) \\u222a [min, max) in the next created subcontext.\\n    // If any other memory is written to, the test will fail. Can be called multiple times to add more ranges\\n    // to the set.\\n    function expectSafeMemoryCall(uint64 min, uint64 max) external;\\n    // Sets block.coinbase\\n    function coinbase(address newCoinbase) external;\\n    // Snapshot the current state of the evm.\\n    // Returns the id of the snapshot that was created.\\n    // To revert a snapshot use `revertTo`\\n    function snapshot() external returns (uint256 snapshotId);\\n    // Revert the state of the EVM to a previous snapshot\\n    // Takes the snapshot id to revert to.\\n    // This deletes the snapshot and all snapshots taken after the given snapshot id.\\n    function revertTo(uint256 snapshotId) external returns (bool success);\\n    // Creates a new fork with the given endpoint and block and returns the identifier of the fork\\n    function createFork(string calldata urlOrAlias, uint256 blockNumber) external returns (uint256 forkId);\\n    // Creates a new fork with the given endpoint and the _latest_ block and returns the identifier of the fork\\n    function createFork(string calldata urlOrAlias) external returns (uint256 forkId);\\n    // Creates a new fork with the given endpoint and at the block the given transaction was mined in, replays all transaction mined in the block before the transaction,\\n    // and returns the identifier of the fork\\n    function createFork(string calldata urlOrAlias, bytes32 txHash) external returns (uint256 forkId);\\n    // Creates _and_ also selects a new fork with the given endpoint and block and returns the identifier of the fork\\n    function createSelectFork(string calldata urlOrAlias, uint256 blockNumber) external returns (uint256 forkId);\\n    // Creates _and_ also selects new fork with the given endpoint and at the block the given transaction was mined in, replays all transaction mined in the block before\\n    // the transaction, returns the identifier of the fork\\n    function createSelectFork(string calldata urlOrAlias, bytes32 txHash) external returns (uint256 forkId);\\n    // Creates _and_ also selects a new fork with the given endpoint and the latest block and returns the identifier of the fork\\n    function createSelectFork(string calldata urlOrAlias) external returns (uint256 forkId);\\n    // Takes a fork identifier created by `createFork` and sets the corresponding forked state as active.\\n    function selectFork(uint256 forkId) external;\\n    /// Returns the identifier of the currently active fork. Reverts if no fork is currently active.\\n    function activeFork() external view returns (uint256 forkId);\\n    // Updates the currently active fork to given block number\\n    // This is similar to `roll` but for the currently active fork\\n    function rollFork(uint256 blockNumber) external;\\n    // Updates the currently active fork to given transaction\\n    // this will `rollFork` with the number of the block the transaction was mined in and replays all transaction mined before it in the block\\n    function rollFork(bytes32 txHash) external;\\n    // Updates the given fork to given block number\\n    function rollFork(uint256 forkId, uint256 blockNumber) external;\\n    // Updates the given fork to block number of the given transaction and replays all transaction mined before it in the block\\n    function rollFork(uint256 forkId, bytes32 txHash) external;\\n    // Marks that the account(s) should use persistent storage across fork swaps in a multifork setup\\n    // Meaning, changes made to the state of this account will be kept when switching forks\\n    function makePersistent(address account) external;\\n    function makePersistent(address account0, address account1) external;\\n    function makePersistent(address account0, address account1, address account2) external;\\n    function makePersistent(address[] calldata accounts) external;\\n    // Revokes persistent status from the address, previously added via `makePersistent`\\n    function revokePersistent(address account) external;\\n    function revokePersistent(address[] calldata accounts) external;\\n    // Returns true if the account is marked as persistent\\n    function isPersistent(address account) external view returns (bool persistent);\\n    // In forking mode, explicitly grant the given address cheatcode access\\n    function allowCheatcodes(address account) external;\\n    // Fetches the given transaction from the active fork and executes it on the current state\\n    function transact(bytes32 txHash) external;\\n    // Fetches the given transaction from the given fork and executes it on the current state\\n    function transact(uint256 forkId, bytes32 txHash) external;\\n}\\n\",\"keccak256\":\"0x64827f48bafb014a69560bc980355f5c3351e4235ee43338c0f8a43a01cdff62\",\"license\":\"MIT\"}},\"version\":1}",
+  "metadata": {
+    "compiler": {
+      "version": "0.8.21+commit.d9974bed"
+    },
+    "language": "Solidity",
+    "output": {
+      "abi": [],
+      "devdoc": {
+        "kind": "dev",
+        "methods": {},
+        "version": 1
+      },
+      "userdoc": {
+        "kind": "user",
+        "methods": {},
+        "version": 1
+      }
+    },
+    "settings": {
+      "remappings": [
+        "@openzeppelin/=node_modules/@openzeppelin/",
+        "@solit/contracts/=contracts/",
+        "contracts-upgradeable/=node_modules/@openzeppelin/contracts-upgradeable/",
+        "ds-test/=lib/forge-std/lib/ds-test/src/",
+        "eth-gas-reporter/=node_modules/eth-gas-reporter/",
+        "forge-std/=lib/forge-std/src/",
+        "hardhat/=node_modules/hardhat/",
+        "sample-projects/=node_modules/hardhat/sample-projects/",
+        "solady/=node_modules/solady/",
+        "solmate/=node_modules/solmate/"
+      ],
+      "optimizer": {
+        "enabled": true,
+        "runs": 1000000
+      },
+      "metadata": {
+        "useLiteralContent": true,
+        "bytecodeHash": "ipfs"
+      },
+      "compilationTarget": {
+        "lib/forge-std/src/Base.sol": "CommonBase"
+      },
+      "libraries": {}
+    },
+    "sources": {
+      "lib/forge-std/src/Base.sol": {
+        "keccak256": "0x4ff1a785311017d1eedb1b4737956fa383067ad34eb439abfec1d989754dde1c",
+        "urls": [],
+        "content": "// SPDX-License-Identifier: MIT\npragma solidity >=0.6.2 <0.9.0;\n\nimport {StdStorage} from \"./StdStorage.sol\";\nimport {Vm, VmSafe} from \"./Vm.sol\";\n\nabstract contract CommonBase {\n    // Cheat code address, 0x7109709ECfa91a80626fF3989D68f67F5b1DD12D.\n    address internal constant VM_ADDRESS = address(uint160(uint256(keccak256(\"hevm cheat code\"))));\n    // console.sol and console2.sol work by executing a staticcall to this address.\n    address internal constant CONSOLE = 0x000000000000000000636F6e736F6c652e6c6f67;\n    // Used when deploying with create2, https://github.com/Arachnid/deterministic-deployment-proxy.\n    address internal constant CREATE2_FACTORY = 0x4e59b44847b379578588920cA78FbF26c0B4956C;\n    // Default address for tx.origin and msg.sender, 0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38.\n    address internal constant DEFAULT_SENDER = address(uint160(uint256(keccak256(\"foundry default caller\"))));\n    // Address of the test contract, deployed by the DEFAULT_SENDER.\n    address internal constant DEFAULT_TEST_CONTRACT = 0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f;\n    // Deterministic deployment address of the Multicall3 contract.\n    address internal constant MULTICALL3_ADDRESS = 0xcA11bde05977b3631167028862bE2a173976CA11;\n    // The order of the secp256k1 curve.\n    uint256 internal constant SECP256K1_ORDER =\n        115792089237316195423570985008687907852837564279074904382605163141518161494337;\n\n    uint256 internal constant UINT256_MAX =\n        115792089237316195423570985008687907853269984665640564039457584007913129639935;\n\n    Vm internal constant vm = Vm(VM_ADDRESS);\n    StdStorage internal stdstore;\n}\n\nabstract contract TestBase is CommonBase {}\n\nabstract contract ScriptBase is CommonBase {\n    VmSafe internal constant vmSafe = VmSafe(VM_ADDRESS);\n}\n",
+        "license": "MIT"
+      },
+      "lib/forge-std/src/StdStorage.sol": {
+        "keccak256": "0x4298f3f4cedaedb07029820b1daad2c03af45379559392201f7bf3ec71105811",
+        "urls": [],
+        "content": "// SPDX-License-Identifier: MIT\npragma solidity >=0.6.2 <0.9.0;\n\nimport {Vm} from \"./Vm.sol\";\n\nstruct StdStorage {\n    mapping(address => mapping(bytes4 => mapping(bytes32 => uint256))) slots;\n    mapping(address => mapping(bytes4 => mapping(bytes32 => bool))) finds;\n    bytes32[] _keys;\n    bytes4 _sig;\n    uint256 _depth;\n    address _target;\n    bytes32 _set;\n}\n\nlibrary stdStorageSafe {\n    event SlotFound(address who, bytes4 fsig, bytes32 keysHash, uint256 slot);\n    event WARNING_UninitedSlot(address who, uint256 slot);\n\n    Vm private constant vm = Vm(address(uint160(uint256(keccak256(\"hevm cheat code\")))));\n\n    function sigs(string memory sigStr) internal pure returns (bytes4) {\n        return bytes4(keccak256(bytes(sigStr)));\n    }\n\n    /// @notice find an arbitrary storage slot given a function sig, input data, address of the contract and a value to check against\n    // slot complexity:\n    //  if flat, will be bytes32(uint256(uint));\n    //  if map, will be keccak256(abi.encode(key, uint(slot)));\n    //  if deep map, will be keccak256(abi.encode(key1, keccak256(abi.encode(key0, uint(slot)))));\n    //  if map struct, will be bytes32(uint256(keccak256(abi.encode(key1, keccak256(abi.encode(key0, uint(slot)))))) + structFieldDepth);\n    function find(StdStorage storage self) internal returns (uint256) {\n        address who = self._target;\n        bytes4 fsig = self._sig;\n        uint256 field_depth = self._depth;\n        bytes32[] memory ins = self._keys;\n\n        // calldata to test against\n        if (self.finds[who][fsig][keccak256(abi.encodePacked(ins, field_depth))]) {\n            return self.slots[who][fsig][keccak256(abi.encodePacked(ins, field_depth))];\n        }\n        bytes memory cald = abi.encodePacked(fsig, flatten(ins));\n        vm.record();\n        bytes32 fdat;\n        {\n            (, bytes memory rdat) = who.staticcall(cald);\n            fdat = bytesToBytes32(rdat, 32 * field_depth);\n        }\n\n        (bytes32[] memory reads,) = vm.accesses(address(who));\n        if (reads.length == 1) {\n            bytes32 curr = vm.load(who, reads[0]);\n            if (curr == bytes32(0)) {\n                emit WARNING_UninitedSlot(who, uint256(reads[0]));\n            }\n            if (fdat != curr) {\n                require(\n                    false,\n                    \"stdStorage find(StdStorage): Packed slot. This would cause dangerous overwriting and currently isn't supported.\"\n                );\n            }\n            emit SlotFound(who, fsig, keccak256(abi.encodePacked(ins, field_depth)), uint256(reads[0]));\n            self.slots[who][fsig][keccak256(abi.encodePacked(ins, field_depth))] = uint256(reads[0]);\n            self.finds[who][fsig][keccak256(abi.encodePacked(ins, field_depth))] = true;\n        } else if (reads.length > 1) {\n            for (uint256 i = 0; i < reads.length; i++) {\n                bytes32 prev = vm.load(who, reads[i]);\n                if (prev == bytes32(0)) {\n                    emit WARNING_UninitedSlot(who, uint256(reads[i]));\n                }\n                if (prev != fdat) {\n                    continue;\n                }\n                bytes32 new_val = ~prev;\n                // store\n                vm.store(who, reads[i], new_val);\n                bool success;\n                {\n                    bytes memory rdat;\n                    (success, rdat) = who.staticcall(cald);\n                    fdat = bytesToBytes32(rdat, 32 * field_depth);\n                }\n\n                if (success && fdat == new_val) {\n                    // we found which of the slots is the actual one\n                    emit SlotFound(who, fsig, keccak256(abi.encodePacked(ins, field_depth)), uint256(reads[i]));\n                    self.slots[who][fsig][keccak256(abi.encodePacked(ins, field_depth))] = uint256(reads[i]);\n                    self.finds[who][fsig][keccak256(abi.encodePacked(ins, field_depth))] = true;\n                    vm.store(who, reads[i], prev);\n                    break;\n                }\n                vm.store(who, reads[i], prev);\n            }\n        } else {\n            revert(\"stdStorage find(StdStorage): No storage use detected for target.\");\n        }\n\n        require(\n            self.finds[who][fsig][keccak256(abi.encodePacked(ins, field_depth))],\n            \"stdStorage find(StdStorage): Slot(s) not found.\"\n        );\n\n        delete self._target;\n        delete self._sig;\n        delete self._keys;\n        delete self._depth;\n\n        return self.slots[who][fsig][keccak256(abi.encodePacked(ins, field_depth))];\n    }\n\n    function target(StdStorage storage self, address _target) internal returns (StdStorage storage) {\n        self._target = _target;\n        return self;\n    }\n\n    function sig(StdStorage storage self, bytes4 _sig) internal returns (StdStorage storage) {\n        self._sig = _sig;\n        return self;\n    }\n\n    function sig(StdStorage storage self, string memory _sig) internal returns (StdStorage storage) {\n        self._sig = sigs(_sig);\n        return self;\n    }\n\n    function with_key(StdStorage storage self, address who) internal returns (StdStorage storage) {\n        self._keys.push(bytes32(uint256(uint160(who))));\n        return self;\n    }\n\n    function with_key(StdStorage storage self, uint256 amt) internal returns (StdStorage storage) {\n        self._keys.push(bytes32(amt));\n        return self;\n    }\n\n    function with_key(StdStorage storage self, bytes32 key) internal returns (StdStorage storage) {\n        self._keys.push(key);\n        return self;\n    }\n\n    function depth(StdStorage storage self, uint256 _depth) internal returns (StdStorage storage) {\n        self._depth = _depth;\n        return self;\n    }\n\n    function read(StdStorage storage self) private returns (bytes memory) {\n        address t = self._target;\n        uint256 s = find(self);\n        return abi.encode(vm.load(t, bytes32(s)));\n    }\n\n    function read_bytes32(StdStorage storage self) internal returns (bytes32) {\n        return abi.decode(read(self), (bytes32));\n    }\n\n    function read_bool(StdStorage storage self) internal returns (bool) {\n        int256 v = read_int(self);\n        if (v == 0) return false;\n        if (v == 1) return true;\n        revert(\"stdStorage read_bool(StdStorage): Cannot decode. Make sure you are reading a bool.\");\n    }\n\n    function read_address(StdStorage storage self) internal returns (address) {\n        return abi.decode(read(self), (address));\n    }\n\n    function read_uint(StdStorage storage self) internal returns (uint256) {\n        return abi.decode(read(self), (uint256));\n    }\n\n    function read_int(StdStorage storage self) internal returns (int256) {\n        return abi.decode(read(self), (int256));\n    }\n\n    function parent(StdStorage storage self) internal returns (uint256, bytes32) {\n        address who = self._target;\n        uint256 field_depth = self._depth;\n        vm.startMappingRecording();\n        uint256 child = find(self) - field_depth;\n        (bool found, bytes32 key, bytes32 parent_slot) = vm.getMappingKeyAndParentOf(who, bytes32(child));\n        if (!found) {\n            revert(\n                \"stdStorage read_bool(StdStorage): Cannot find parent. Make sure you give a slot and startMappingRecording() has been called.\"\n            );\n        }\n        return (uint256(parent_slot), key);\n    }\n\n    function root(StdStorage storage self) internal returns (uint256) {\n        address who = self._target;\n        uint256 field_depth = self._depth;\n        vm.startMappingRecording();\n        uint256 child = find(self) - field_depth;\n        bool found;\n        bytes32 root_slot;\n        bytes32 parent_slot;\n        (found,, parent_slot) = vm.getMappingKeyAndParentOf(who, bytes32(child));\n        if (!found) {\n            revert(\n                \"stdStorage read_bool(StdStorage): Cannot find parent. Make sure you give a slot and startMappingRecording() has been called.\"\n            );\n        }\n        while (found) {\n            root_slot = parent_slot;\n            (found,, parent_slot) = vm.getMappingKeyAndParentOf(who, bytes32(root_slot));\n        }\n        return uint256(root_slot);\n    }\n\n    function bytesToBytes32(bytes memory b, uint256 offset) private pure returns (bytes32) {\n        bytes32 out;\n\n        uint256 max = b.length > 32 ? 32 : b.length;\n        for (uint256 i = 0; i < max; i++) {\n            out |= bytes32(b[offset + i] & 0xFF) >> (i * 8);\n        }\n        return out;\n    }\n\n    function flatten(bytes32[] memory b) private pure returns (bytes memory) {\n        bytes memory result = new bytes(b.length * 32);\n        for (uint256 i = 0; i < b.length; i++) {\n            bytes32 k = b[i];\n            /// @solidity memory-safe-assembly\n            assembly {\n                mstore(add(result, add(32, mul(32, i))), k)\n            }\n        }\n\n        return result;\n    }\n}\n\nlibrary stdStorage {\n    Vm private constant vm = Vm(address(uint160(uint256(keccak256(\"hevm cheat code\")))));\n\n    function sigs(string memory sigStr) internal pure returns (bytes4) {\n        return stdStorageSafe.sigs(sigStr);\n    }\n\n    function find(StdStorage storage self) internal returns (uint256) {\n        return stdStorageSafe.find(self);\n    }\n\n    function target(StdStorage storage self, address _target) internal returns (StdStorage storage) {\n        return stdStorageSafe.target(self, _target);\n    }\n\n    function sig(StdStorage storage self, bytes4 _sig) internal returns (StdStorage storage) {\n        return stdStorageSafe.sig(self, _sig);\n    }\n\n    function sig(StdStorage storage self, string memory _sig) internal returns (StdStorage storage) {\n        return stdStorageSafe.sig(self, _sig);\n    }\n\n    function with_key(StdStorage storage self, address who) internal returns (StdStorage storage) {\n        return stdStorageSafe.with_key(self, who);\n    }\n\n    function with_key(StdStorage storage self, uint256 amt) internal returns (StdStorage storage) {\n        return stdStorageSafe.with_key(self, amt);\n    }\n\n    function with_key(StdStorage storage self, bytes32 key) internal returns (StdStorage storage) {\n        return stdStorageSafe.with_key(self, key);\n    }\n\n    function depth(StdStorage storage self, uint256 _depth) internal returns (StdStorage storage) {\n        return stdStorageSafe.depth(self, _depth);\n    }\n\n    function checked_write(StdStorage storage self, address who) internal {\n        checked_write(self, bytes32(uint256(uint160(who))));\n    }\n\n    function checked_write(StdStorage storage self, uint256 amt) internal {\n        checked_write(self, bytes32(amt));\n    }\n\n    function checked_write_int(StdStorage storage self, int256 val) internal {\n        checked_write(self, bytes32(uint256(val)));\n    }\n\n    function checked_write(StdStorage storage self, bool write) internal {\n        bytes32 t;\n        /// @solidity memory-safe-assembly\n        assembly {\n            t := write\n        }\n        checked_write(self, t);\n    }\n\n    function checked_write(StdStorage storage self, bytes32 set) internal {\n        address who = self._target;\n        bytes4 fsig = self._sig;\n        uint256 field_depth = self._depth;\n        bytes32[] memory ins = self._keys;\n\n        bytes memory cald = abi.encodePacked(fsig, flatten(ins));\n        if (!self.finds[who][fsig][keccak256(abi.encodePacked(ins, field_depth))]) {\n            find(self);\n        }\n        bytes32 slot = bytes32(self.slots[who][fsig][keccak256(abi.encodePacked(ins, field_depth))]);\n\n        bytes32 fdat;\n        {\n            (, bytes memory rdat) = who.staticcall(cald);\n            fdat = bytesToBytes32(rdat, 32 * field_depth);\n        }\n        bytes32 curr = vm.load(who, slot);\n\n        if (fdat != curr) {\n            require(\n                false,\n                \"stdStorage find(StdStorage): Packed slot. This would cause dangerous overwriting and currently isn't supported.\"\n            );\n        }\n        vm.store(who, slot, set);\n        delete self._target;\n        delete self._sig;\n        delete self._keys;\n        delete self._depth;\n    }\n\n    function read_bytes32(StdStorage storage self) internal returns (bytes32) {\n        return stdStorageSafe.read_bytes32(self);\n    }\n\n    function read_bool(StdStorage storage self) internal returns (bool) {\n        return stdStorageSafe.read_bool(self);\n    }\n\n    function read_address(StdStorage storage self) internal returns (address) {\n        return stdStorageSafe.read_address(self);\n    }\n\n    function read_uint(StdStorage storage self) internal returns (uint256) {\n        return stdStorageSafe.read_uint(self);\n    }\n\n    function read_int(StdStorage storage self) internal returns (int256) {\n        return stdStorageSafe.read_int(self);\n    }\n\n    function parent(StdStorage storage self) internal returns (uint256, bytes32) {\n        return stdStorageSafe.parent(self);\n    }\n\n    function root(StdStorage storage self) internal returns (uint256) {\n        return stdStorageSafe.root(self);\n    }\n\n    // Private function so needs to be copied over\n    function bytesToBytes32(bytes memory b, uint256 offset) private pure returns (bytes32) {\n        bytes32 out;\n\n        uint256 max = b.length > 32 ? 32 : b.length;\n        for (uint256 i = 0; i < max; i++) {\n            out |= bytes32(b[offset + i] & 0xFF) >> (i * 8);\n        }\n        return out;\n    }\n\n    // Private function so needs to be copied over\n    function flatten(bytes32[] memory b) private pure returns (bytes memory) {\n        bytes memory result = new bytes(b.length * 32);\n        for (uint256 i = 0; i < b.length; i++) {\n            bytes32 k = b[i];\n            /// @solidity memory-safe-assembly\n            assembly {\n                mstore(add(result, add(32, mul(32, i))), k)\n            }\n        }\n\n        return result;\n    }\n}\n",
+        "license": "MIT"
+      },
+      "lib/forge-std/src/Vm.sol": {
+        "keccak256": "0x64827f48bafb014a69560bc980355f5c3351e4235ee43338c0f8a43a01cdff62",
+        "urls": [],
+        "content": "// SPDX-License-Identifier: MIT\npragma solidity >=0.6.2 <0.9.0;\n\npragma experimental ABIEncoderV2;\n\n// Cheatcodes are marked as view/pure/none using the following rules:\n// 0. A call's observable behaviour includes its return value, logs, reverts and state writes,\n// 1. If you can influence a later call's observable behaviour, you're neither `view` nor `pure (you are modifying some state be it the EVM, interpreter, filesystem, etc),\n// 2. Otherwise if you can be influenced by an earlier call, or if reading some state, you're `view`,\n// 3. Otherwise you're `pure`.\n\ninterface VmSafe {\n    enum CallerMode {\n        None,\n        Broadcast,\n        RecurrentBroadcast,\n        Prank,\n        RecurrentPrank\n    }\n\n    struct Log {\n        bytes32[] topics;\n        bytes data;\n        address emitter;\n    }\n\n    struct Rpc {\n        string key;\n        string url;\n    }\n\n    struct DirEntry {\n        string errorMessage;\n        string path;\n        uint64 depth;\n        bool isDir;\n        bool isSymlink;\n    }\n\n    struct FsMetadata {\n        bool isDir;\n        bool isSymlink;\n        uint256 length;\n        bool readOnly;\n        uint256 modified;\n        uint256 accessed;\n        uint256 created;\n    }\n\n    struct Wallet {\n        address addr;\n        uint256 publicKeyX;\n        uint256 publicKeyY;\n        uint256 privateKey;\n    }\n\n    struct FfiResult {\n        int32 exit_code;\n        bytes stdout;\n        bytes stderr;\n    }\n\n    // Derives a private key from the name, labels the account with that name, and returns the wallet\n    function createWallet(string calldata walletLabel) external returns (Wallet memory wallet);\n    // Generates a wallet from the private key and returns the wallet\n    function createWallet(uint256 privateKey) external returns (Wallet memory wallet);\n    // Generates a wallet from the private key, labels the account with that name, and returns the wallet\n    function createWallet(uint256 privateKey, string calldata walletLabel) external returns (Wallet memory wallet);\n    // Signs data, (Wallet, digest) => (v, r, s)\n    function sign(Wallet calldata wallet, bytes32 digest) external returns (uint8 v, bytes32 r, bytes32 s);\n    // Get nonce for a Wallet\n    function getNonce(Wallet calldata wallet) external returns (uint64 nonce);\n\n    // Loads a storage slot from an address\n    function load(address target, bytes32 slot) external view returns (bytes32 data);\n    // Signs data\n    function sign(uint256 privateKey, bytes32 digest) external pure returns (uint8 v, bytes32 r, bytes32 s);\n    // Gets the address for a given private key\n    function addr(uint256 privateKey) external pure returns (address keyAddr);\n    // Gets the nonce of an account\n    function getNonce(address account) external view returns (uint64 nonce);\n    // Performs a foreign function call via the terminal\n    function ffi(string[] calldata commandInput) external returns (bytes memory result);\n    // Performs a foreign function call via terminal and returns the exit code, stdout, and stderr\n    function tryFfi(string[] calldata commandInput) external returns (FfiResult memory result);\n    // Sets environment variables\n    function setEnv(string calldata name, string calldata value) external;\n    // Reads environment variables, (name) => (value)\n    function envBool(string calldata name) external view returns (bool value);\n    function envUint(string calldata name) external view returns (uint256 value);\n    function envInt(string calldata name) external view returns (int256 value);\n    function envAddress(string calldata name) external view returns (address value);\n    function envBytes32(string calldata name) external view returns (bytes32 value);\n    function envString(string calldata name) external view returns (string memory value);\n    function envBytes(string calldata name) external view returns (bytes memory value);\n    // Reads environment variables as arrays\n    function envBool(string calldata name, string calldata delim) external view returns (bool[] memory value);\n    function envUint(string calldata name, string calldata delim) external view returns (uint256[] memory value);\n    function envInt(string calldata name, string calldata delim) external view returns (int256[] memory value);\n    function envAddress(string calldata name, string calldata delim) external view returns (address[] memory value);\n    function envBytes32(string calldata name, string calldata delim) external view returns (bytes32[] memory value);\n    function envString(string calldata name, string calldata delim) external view returns (string[] memory value);\n    function envBytes(string calldata name, string calldata delim) external view returns (bytes[] memory value);\n    // Read environment variables with default value\n    function envOr(string calldata name, bool defaultValue) external returns (bool value);\n    function envOr(string calldata name, uint256 defaultValue) external returns (uint256 value);\n    function envOr(string calldata name, int256 defaultValue) external returns (int256 value);\n    function envOr(string calldata name, address defaultValue) external returns (address value);\n    function envOr(string calldata name, bytes32 defaultValue) external returns (bytes32 value);\n    function envOr(string calldata name, string calldata defaultValue) external returns (string memory value);\n    function envOr(string calldata name, bytes calldata defaultValue) external returns (bytes memory value);\n    // Read environment variables as arrays with default value\n    function envOr(string calldata name, string calldata delim, bool[] calldata defaultValue)\n        external\n        returns (bool[] memory value);\n    function envOr(string calldata name, string calldata delim, uint256[] calldata defaultValue)\n        external\n        returns (uint256[] memory value);\n    function envOr(string calldata name, string calldata delim, int256[] calldata defaultValue)\n        external\n        returns (int256[] memory value);\n    function envOr(string calldata name, string calldata delim, address[] calldata defaultValue)\n        external\n        returns (address[] memory value);\n    function envOr(string calldata name, string calldata delim, bytes32[] calldata defaultValue)\n        external\n        returns (bytes32[] memory value);\n    function envOr(string calldata name, string calldata delim, string[] calldata defaultValue)\n        external\n        returns (string[] memory value);\n    function envOr(string calldata name, string calldata delim, bytes[] calldata defaultValue)\n        external\n        returns (bytes[] memory value);\n    // Records all storage reads and writes\n    function record() external;\n    // Gets all accessed reads and write slot from a recording session, for a given address\n    function accesses(address target) external returns (bytes32[] memory readSlots, bytes32[] memory writeSlots);\n    // Gets the _creation_ bytecode from an artifact file. Takes in the relative path to the json file\n    function getCode(string calldata artifactPath) external view returns (bytes memory creationBytecode);\n    // Gets the _deployed_ bytecode from an artifact file. Takes in the relative path to the json file\n    function getDeployedCode(string calldata artifactPath) external view returns (bytes memory runtimeBytecode);\n    // Labels an address in call traces\n    function label(address account, string calldata newLabel) external;\n    // Gets the label for the specified address\n    function getLabel(address account) external returns (string memory currentLabel);\n    // Using the address that calls the test contract, has the next call (at this call depth only) create a transaction that can later be signed and sent onchain\n    function broadcast() external;\n    // Has the next call (at this call depth only) create a transaction with the address provided as the sender that can later be signed and sent onchain\n    function broadcast(address signer) external;\n    // Has the next call (at this call depth only) create a transaction with the private key provided as the sender that can later be signed and sent onchain\n    function broadcast(uint256 privateKey) external;\n    // Using the address that calls the test contract, has all subsequent calls (at this call depth only) create transactions that can later be signed and sent onchain\n    function startBroadcast() external;\n    // Has all subsequent calls (at this call depth only) create transactions with the address provided that can later be signed and sent onchain\n    function startBroadcast(address signer) external;\n    // Has all subsequent calls (at this call depth only) create transactions with the private key provided that can later be signed and sent onchain\n    function startBroadcast(uint256 privateKey) external;\n    // Stops collecting onchain transactions\n    function stopBroadcast() external;\n\n    // Get the path of the current project root.\n    function projectRoot() external view returns (string memory path);\n    // Reads the entire content of file to string. `path` is relative to the project root.\n    function readFile(string calldata path) external view returns (string memory data);\n    // Reads the entire content of file as binary. `path` is relative to the project root.\n    function readFileBinary(string calldata path) external view returns (bytes memory data);\n    // Reads next line of file to string.\n    function readLine(string calldata path) external view returns (string memory line);\n    // Writes data to file, creating a file if it does not exist, and entirely replacing its contents if it does.\n    // `path` is relative to the project root.\n    function writeFile(string calldata path, string calldata data) external;\n    // Writes binary data to a file, creating a file if it does not exist, and entirely replacing its contents if it does.\n    // `path` is relative to the project root.\n    function writeFileBinary(string calldata path, bytes calldata data) external;\n    // Writes line to file, creating a file if it does not exist.\n    // `path` is relative to the project root.\n    function writeLine(string calldata path, string calldata data) external;\n    // Copies the contents of one file to another. This function will **overwrite** the contents of `to`.\n    // On success, the total number of bytes copied is returned and it is equal to the length of the `to` file as reported by `metadata`.\n    // Both `from` and `to` are relative to the project root.\n    function copyFile(string calldata from, string calldata to) external returns (uint64 copied);\n    // Closes file for reading, resetting the offset and allowing to read it from beginning with readLine.\n    // `path` is relative to the project root.\n    function closeFile(string calldata path) external;\n    // Removes a file from the filesystem.\n    // This cheatcode will revert in the following situations, but is not limited to just these cases:\n    // - `path` points to a directory.\n    // - The file doesn't exist.\n    // - The user lacks permissions to remove the file.\n    // `path` is relative to the project root.\n    function removeFile(string calldata path) external;\n    // Creates a new, empty directory at the provided path.\n    // This cheatcode will revert in the following situations, but is not limited to just these cases:\n    // - User lacks permissions to modify `path`.\n    // - A parent of the given path doesn't exist and `recursive` is false.\n    // - `path` already exists and `recursive` is false.\n    // `path` is relative to the project root.\n    function createDir(string calldata path, bool recursive) external;\n    // Removes a directory at the provided path.\n    // This cheatcode will revert in the following situations, but is not limited to just these cases:\n    // - `path` doesn't exist.\n    // - `path` isn't a directory.\n    // - User lacks permissions to modify `path`.\n    // - The directory is not empty and `recursive` is false.\n    // `path` is relative to the project root.\n    function removeDir(string calldata path, bool recursive) external;\n    // Reads the directory at the given path recursively, up to `max_depth`.\n    // `max_depth` defaults to 1, meaning only the direct children of the given directory will be returned.\n    // Follows symbolic links if `follow_links` is true.\n    function readDir(string calldata path) external view returns (DirEntry[] memory entries);\n    function readDir(string calldata path, uint64 maxDepth) external view returns (DirEntry[] memory entries);\n    function readDir(string calldata path, uint64 maxDepth, bool followLinks)\n        external\n        view\n        returns (DirEntry[] memory entries);\n    // Reads a symbolic link, returning the path that the link points to.\n    // This cheatcode will revert in the following situations, but is not limited to just these cases:\n    // - `path` is not a symbolic link.\n    // - `path` does not exist.\n    function readLink(string calldata linkPath) external view returns (string memory targetPath);\n    // Given a path, query the file system to get information about a file, directory, etc.\n    function fsMetadata(string calldata path) external view returns (FsMetadata memory metadata);\n    // Returns true if the given path points to an existing entity, else returns false\n    function exists(string calldata path) external returns (bool result);\n    // Returns true if the path exists on disk and is pointing at a regular file, else returns false\n    function isFile(string calldata path) external returns (bool result);\n    // Returns true if the path exists on disk and is pointing at a directory, else returns false\n    function isDir(string calldata path) external returns (bool result);\n\n    // Convert values to a string\n    function toString(address value) external pure returns (string memory stringifiedValue);\n    function toString(bytes calldata value) external pure returns (string memory stringifiedValue);\n    function toString(bytes32 value) external pure returns (string memory stringifiedValue);\n    function toString(bool value) external pure returns (string memory stringifiedValue);\n    function toString(uint256 value) external pure returns (string memory stringifiedValue);\n    function toString(int256 value) external pure returns (string memory stringifiedValue);\n    // Convert values from a string\n    function parseBytes(string calldata stringifiedValue) external pure returns (bytes memory parsedValue);\n    function parseAddress(string calldata stringifiedValue) external pure returns (address parsedValue);\n    function parseUint(string calldata stringifiedValue) external pure returns (uint256 parsedValue);\n    function parseInt(string calldata stringifiedValue) external pure returns (int256 parsedValue);\n    function parseBytes32(string calldata stringifiedValue) external pure returns (bytes32 parsedValue);\n    function parseBool(string calldata stringifiedValue) external pure returns (bool parsedValue);\n    // Record all the transaction logs\n    function recordLogs() external;\n    // Gets all the recorded logs\n    function getRecordedLogs() external returns (Log[] memory logs);\n    // Derive a private key from a provided mnenomic string (or mnenomic file path) at the derivation path m/44'/60'/0'/0/{index}\n    function deriveKey(string calldata mnemonic, uint32 index) external pure returns (uint256 privateKey);\n    // Derive a private key from a provided mnenomic string (or mnenomic file path) at {derivationPath}{index}\n    function deriveKey(string calldata mnemonic, string calldata derivationPath, uint32 index)\n        external\n        pure\n        returns (uint256 privateKey);\n    // Adds a private key to the local forge wallet and returns the address\n    function rememberKey(uint256 privateKey) external returns (address keyAddr);\n    //\n    // parseJson\n    //\n    // ----\n    // In case the returned value is a JSON object, it's encoded as a ABI-encoded tuple. As JSON objects\n    // don't have the notion of ordered, but tuples do, they JSON object is encoded with it's fields ordered in\n    // ALPHABETICAL order. That means that in order to successfully decode the tuple, we need to define a tuple that\n    // encodes the fields in the same order, which is alphabetical. In the case of Solidity structs, they are encoded\n    // as tuples, with the attributes in the order in which they are defined.\n    // For example: json = { 'a': 1, 'b': 0xa4tb......3xs}\n    // a: uint256\n    // b: address\n    // To decode that json, we need to define a struct or a tuple as follows:\n    // struct json = { uint256 a; address b; }\n    // If we defined a json struct with the opposite order, meaning placing the address b first, it would try to\n    // decode the tuple in that order, and thus fail.\n    // ----\n    // Given a string of JSON, return it as ABI-encoded\n    function parseJson(string calldata json, string calldata key) external pure returns (bytes memory abiEncodedData);\n    function parseJson(string calldata json) external pure returns (bytes memory abiEncodedData);\n\n    // The following parseJson cheatcodes will do type coercion, for the type that they indicate.\n    // For example, parseJsonUint will coerce all values to a uint256. That includes stringified numbers '12'\n    // and hex numbers '0xEF'.\n    // Type coercion works ONLY for discrete values or arrays. That means that the key must return a value or array, not\n    // a JSON object.\n    function parseJsonUint(string calldata json, string calldata key) external pure returns (uint256);\n    function parseJsonUintArray(string calldata json, string calldata key) external pure returns (uint256[] memory);\n    function parseJsonInt(string calldata json, string calldata key) external pure returns (int256);\n    function parseJsonIntArray(string calldata json, string calldata key) external pure returns (int256[] memory);\n    function parseJsonBool(string calldata json, string calldata key) external pure returns (bool);\n    function parseJsonBoolArray(string calldata json, string calldata key) external pure returns (bool[] memory);\n    function parseJsonAddress(string calldata json, string calldata key) external pure returns (address);\n    function parseJsonAddressArray(string calldata json, string calldata key)\n        external\n        pure\n        returns (address[] memory);\n    function parseJsonString(string calldata json, string calldata key) external pure returns (string memory);\n    function parseJsonStringArray(string calldata json, string calldata key) external pure returns (string[] memory);\n    function parseJsonBytes(string calldata json, string calldata key) external pure returns (bytes memory);\n    function parseJsonBytesArray(string calldata json, string calldata key) external pure returns (bytes[] memory);\n    function parseJsonBytes32(string calldata json, string calldata key) external pure returns (bytes32);\n    function parseJsonBytes32Array(string calldata json, string calldata key)\n        external\n        pure\n        returns (bytes32[] memory);\n\n    // Checks if a key exists in a JSON or TOML object.\n    function keyExists(string calldata json, string calldata key) external view returns (bool);\n\n    // Returns array of keys for a JSON object\n    function parseJsonKeys(string calldata json, string calldata key) external returns (string[] memory keys);\n\n    // Serialize a key and value to a JSON object stored in-memory that can be later written to a file\n    // It returns the stringified version of the specific JSON file up to that moment.\n    function serializeJson(string calldata objectKey, string calldata value) external returns (string memory json);\n    function serializeBool(string calldata objectKey, string calldata valueKey, bool value)\n        external\n        returns (string memory json);\n    function serializeUint(string calldata objectKey, string calldata valueKey, uint256 value)\n        external\n        returns (string memory json);\n    function serializeInt(string calldata objectKey, string calldata valueKey, int256 value)\n        external\n        returns (string memory json);\n    function serializeAddress(string calldata objectKey, string calldata valueKey, address value)\n        external\n        returns (string memory json);\n    function serializeBytes32(string calldata objectKey, string calldata valueKey, bytes32 value)\n        external\n        returns (string memory json);\n    function serializeString(string calldata objectKey, string calldata valueKey, string calldata value)\n        external\n        returns (string memory json);\n    function serializeBytes(string calldata objectKey, string calldata valueKey, bytes calldata value)\n        external\n        returns (string memory json);\n\n    function serializeBool(string calldata objectKey, string calldata valueKey, bool[] calldata values)\n        external\n        returns (string memory json);\n    function serializeUint(string calldata objectKey, string calldata valueKey, uint256[] calldata values)\n        external\n        returns (string memory json);\n    function serializeInt(string calldata objectKey, string calldata valueKey, int256[] calldata values)\n        external\n        returns (string memory json);\n    function serializeAddress(string calldata objectKey, string calldata valueKey, address[] calldata values)\n        external\n        returns (string memory json);\n    function serializeBytes32(string calldata objectKey, string calldata valueKey, bytes32[] calldata values)\n        external\n        returns (string memory json);\n    function serializeString(string calldata objectKey, string calldata valueKey, string[] calldata values)\n        external\n        returns (string memory json);\n    function serializeBytes(string calldata objectKey, string calldata valueKey, bytes[] calldata values)\n        external\n        returns (string memory json);\n\n    //\n    // writeJson\n    //\n    // ----\n    // Write a serialized JSON object to a file. If the file exists, it will be overwritten.\n    // Let's assume we want to write the following JSON to a file:\n    //\n    // { \"boolean\": true, \"number\": 342, \"object\": { \"title\": \"finally json serialization\" } }\n    //\n    // ```\n    //  string memory json1 = \"some key\";\n    //  vm.serializeBool(json1, \"boolean\", true);\n    //  vm.serializeBool(json1, \"number\", uint256(342));\n    //  json2 = \"some other key\";\n    //  string memory output = vm.serializeString(json2, \"title\", \"finally json serialization\");\n    //  string memory finalJson = vm.serialize(json1, \"object\", output);\n    //  vm.writeJson(finalJson, \"./output/example.json\");\n    // ```\n    // The critical insight is that every invocation of serialization will return the stringified version of the JSON\n    // up to that point. That means we can construct arbitrary JSON objects and then use the return stringified version\n    // to serialize them as values to another JSON object.\n    //\n    // json1 and json2 are simply keys used by the backend to keep track of the objects. So vm.serializeJson(json1,..)\n    // will find the object in-memory that is keyed by \"some key\".\n    function writeJson(string calldata json, string calldata path) external;\n    // Write a serialized JSON object to an **existing** JSON file, replacing a value with key = <value_key>\n    // This is useful to replace a specific value of a JSON file, without having to parse the entire thing\n    function writeJson(string calldata json, string calldata path, string calldata valueKey) external;\n    // Returns the RPC url for the given alias\n    function rpcUrl(string calldata rpcAlias) external view returns (string memory json);\n    // Returns all rpc urls and their aliases `[alias, url][]`\n    function rpcUrls() external view returns (string[2][] memory urls);\n    // Returns all rpc urls and their aliases as structs.\n    function rpcUrlStructs() external view returns (Rpc[] memory urls);\n    // If the condition is false, discard this run's fuzz inputs and generate new ones.\n    function assume(bool condition) external pure;\n    // Pauses gas metering (i.e. gas usage is not counted). Noop if already paused.\n    function pauseGasMetering() external;\n    // Resumes gas metering (i.e. gas usage is counted again). Noop if already on.\n    function resumeGasMetering() external;\n    // Starts recording all map SSTOREs for later retrieval.\n    function startMappingRecording() external;\n    // Stops recording all map SSTOREs for later retrieval and clears the recorded data.\n    function stopMappingRecording() external;\n    // Gets the number of elements in the mapping at the given slot, for a given address.\n    function getMappingLength(address target, bytes32 mappingSlot) external returns (uint256 length);\n    // Gets the elements at index idx of the mapping at the given slot, for a given address. The\n    // index must be less than the length of the mapping (i.e. the number of keys in the mapping).\n    function getMappingSlotAt(address target, bytes32 mappingSlot, uint256 idx) external returns (bytes32 value);\n    // Gets the map key and parent of a mapping at a given slot, for a given address.\n    function getMappingKeyAndParentOf(address target, bytes32 elementSlot)\n        external\n        returns (bool found, bytes32 key, bytes32 parent);\n    // Writes a breakpoint to jump to in the debugger\n    function breakpoint(string calldata char) external;\n    // Writes a conditional breakpoint to jump to in the debugger\n    function breakpoint(string calldata char, bool value) external;\n    // Suspends execution of the main thread for `duration` milliseconds\n    function sleep(uint256 duration) external;\n}\n\ninterface Vm is VmSafe {\n    // Sets block.timestamp\n    function warp(uint256 newTimestamp) external;\n    // Sets block.height\n    function roll(uint256 newHeight) external;\n    // Sets block.basefee\n    function fee(uint256 newBasefee) external;\n    // Sets block.difficulty\n    // Not available on EVM versions from Paris onwards. Use `prevrandao` instead.\n    // If used on unsupported EVM versions it will revert.\n    function difficulty(uint256 newDifficulty) external;\n    // Sets block.prevrandao\n    // Not available on EVM versions before Paris. Use `difficulty` instead.\n    // If used on unsupported EVM versions it will revert.\n    function prevrandao(bytes32 newPrevrandao) external;\n    // Sets block.chainid\n    function chainId(uint256 newChainId) external;\n    // Sets tx.gasprice\n    function txGasPrice(uint256 newGasPrice) external;\n    // Stores a value to an address' storage slot.\n    function store(address target, bytes32 slot, bytes32 value) external;\n    // Sets the nonce of an account; must be higher than the current nonce of the account\n    function setNonce(address account, uint64 newNonce) external;\n    // Sets the nonce of an account to an arbitrary value\n    function setNonceUnsafe(address account, uint64 newNonce) external;\n    // Resets the nonce of an account to 0 for EOAs and 1 for contract accounts\n    function resetNonce(address account) external;\n    // Sets the *next* call's msg.sender to be the input address\n    function prank(address msgSender) external;\n    // Sets all subsequent calls' msg.sender to be the input address until `stopPrank` is called\n    function startPrank(address msgSender) external;\n    // Sets the *next* call's msg.sender to be the input address, and the tx.origin to be the second input\n    function prank(address msgSender, address txOrigin) external;\n    // Sets all subsequent calls' msg.sender to be the input address until `stopPrank` is called, and the tx.origin to be the second input\n    function startPrank(address msgSender, address txOrigin) external;\n    // Resets subsequent calls' msg.sender to be `address(this)`\n    function stopPrank() external;\n    // Reads the current `msg.sender` and `tx.origin` from state and reports if there is any active caller modification\n    function readCallers() external returns (CallerMode callerMode, address msgSender, address txOrigin);\n    // Sets an address' balance\n    function deal(address account, uint256 newBalance) external;\n    // Sets an address' code\n    function etch(address target, bytes calldata newRuntimeBytecode) external;\n    // Marks a test as skipped. Must be called at the top of the test.\n    function skip(bool skipTest) external;\n    // Expects an error on next call\n    function expectRevert(bytes calldata revertData) external;\n    function expectRevert(bytes4 revertData) external;\n    function expectRevert() external;\n\n    // Prepare an expected log with all four checks enabled.\n    // Call this function, then emit an event, then call a function. Internally after the call, we check if\n    // logs were emitted in the expected order with the expected topics and data.\n    // Second form also checks supplied address against emitting contract.\n    function expectEmit() external;\n    function expectEmit(address emitter) external;\n\n    // Prepare an expected log with (bool checkTopic1, bool checkTopic2, bool checkTopic3, bool checkData).\n    // Call this function, then emit an event, then call a function. Internally after the call, we check if\n    // logs were emitted in the expected order with the expected topics and data (as specified by the booleans).\n    // Second form also checks supplied address against emitting contract.\n    function expectEmit(bool checkTopic1, bool checkTopic2, bool checkTopic3, bool checkData) external;\n    function expectEmit(bool checkTopic1, bool checkTopic2, bool checkTopic3, bool checkData, address emitter)\n        external;\n\n    // Mocks a call to an address, returning specified data.\n    // Calldata can either be strict or a partial match, e.g. if you only\n    // pass a Solidity selector to the expected calldata, then the entire Solidity\n    // function will be mocked.\n    function mockCall(address callee, bytes calldata data, bytes calldata returnData) external;\n    // Mocks a call to an address with a specific msg.value, returning specified data.\n    // Calldata match takes precedence over msg.value in case of ambiguity.\n    function mockCall(address callee, uint256 msgValue, bytes calldata data, bytes calldata returnData) external;\n    // Reverts a call to an address with specified revert data.\n    function mockCallRevert(address callee, bytes calldata data, bytes calldata revertData) external;\n    // Reverts a call to an address with a specific msg.value, with specified revert data.\n    function mockCallRevert(address callee, uint256 msgValue, bytes calldata data, bytes calldata revertData)\n        external;\n    // Clears all mocked calls\n    function clearMockedCalls() external;\n    // Expects a call to an address with the specified calldata.\n    // Calldata can either be a strict or a partial match\n    function expectCall(address callee, bytes calldata data) external;\n    // Expects given number of calls to an address with the specified calldata.\n    function expectCall(address callee, bytes calldata data, uint64 count) external;\n    // Expects a call to an address with the specified msg.value and calldata\n    function expectCall(address callee, uint256 msgValue, bytes calldata data) external;\n    // Expects given number of calls to an address with the specified msg.value and calldata\n    function expectCall(address callee, uint256 msgValue, bytes calldata data, uint64 count) external;\n    // Expect a call to an address with the specified msg.value, gas, and calldata.\n    function expectCall(address callee, uint256 msgValue, uint64 gas, bytes calldata data) external;\n    // Expects given number of calls to an address with the specified msg.value, gas, and calldata.\n    function expectCall(address callee, uint256 msgValue, uint64 gas, bytes calldata data, uint64 count) external;\n    // Expect a call to an address with the specified msg.value and calldata, and a *minimum* amount of gas.\n    function expectCallMinGas(address callee, uint256 msgValue, uint64 minGas, bytes calldata data) external;\n    // Expect given number of calls to an address with the specified msg.value and calldata, and a *minimum* amount of gas.\n    function expectCallMinGas(address callee, uint256 msgValue, uint64 minGas, bytes calldata data, uint64 count)\n        external;\n    // Only allows memory writes to offsets [0x00, 0x60) ∪ [min, max) in the current subcontext. If any other\n    // memory is written to, the test will fail. Can be called multiple times to add more ranges to the set.\n    function expectSafeMemory(uint64 min, uint64 max) external;\n    // Only allows memory writes to offsets [0x00, 0x60) ∪ [min, max) in the next created subcontext.\n    // If any other memory is written to, the test will fail. Can be called multiple times to add more ranges\n    // to the set.\n    function expectSafeMemoryCall(uint64 min, uint64 max) external;\n    // Sets block.coinbase\n    function coinbase(address newCoinbase) external;\n    // Snapshot the current state of the evm.\n    // Returns the id of the snapshot that was created.\n    // To revert a snapshot use `revertTo`\n    function snapshot() external returns (uint256 snapshotId);\n    // Revert the state of the EVM to a previous snapshot\n    // Takes the snapshot id to revert to.\n    // This deletes the snapshot and all snapshots taken after the given snapshot id.\n    function revertTo(uint256 snapshotId) external returns (bool success);\n    // Creates a new fork with the given endpoint and block and returns the identifier of the fork\n    function createFork(string calldata urlOrAlias, uint256 blockNumber) external returns (uint256 forkId);\n    // Creates a new fork with the given endpoint and the _latest_ block and returns the identifier of the fork\n    function createFork(string calldata urlOrAlias) external returns (uint256 forkId);\n    // Creates a new fork with the given endpoint and at the block the given transaction was mined in, replays all transaction mined in the block before the transaction,\n    // and returns the identifier of the fork\n    function createFork(string calldata urlOrAlias, bytes32 txHash) external returns (uint256 forkId);\n    // Creates _and_ also selects a new fork with the given endpoint and block and returns the identifier of the fork\n    function createSelectFork(string calldata urlOrAlias, uint256 blockNumber) external returns (uint256 forkId);\n    // Creates _and_ also selects new fork with the given endpoint and at the block the given transaction was mined in, replays all transaction mined in the block before\n    // the transaction, returns the identifier of the fork\n    function createSelectFork(string calldata urlOrAlias, bytes32 txHash) external returns (uint256 forkId);\n    // Creates _and_ also selects a new fork with the given endpoint and the latest block and returns the identifier of the fork\n    function createSelectFork(string calldata urlOrAlias) external returns (uint256 forkId);\n    // Takes a fork identifier created by `createFork` and sets the corresponding forked state as active.\n    function selectFork(uint256 forkId) external;\n    /// Returns the identifier of the currently active fork. Reverts if no fork is currently active.\n    function activeFork() external view returns (uint256 forkId);\n    // Updates the currently active fork to given block number\n    // This is similar to `roll` but for the currently active fork\n    function rollFork(uint256 blockNumber) external;\n    // Updates the currently active fork to given transaction\n    // this will `rollFork` with the number of the block the transaction was mined in and replays all transaction mined before it in the block\n    function rollFork(bytes32 txHash) external;\n    // Updates the given fork to given block number\n    function rollFork(uint256 forkId, uint256 blockNumber) external;\n    // Updates the given fork to block number of the given transaction and replays all transaction mined before it in the block\n    function rollFork(uint256 forkId, bytes32 txHash) external;\n    // Marks that the account(s) should use persistent storage across fork swaps in a multifork setup\n    // Meaning, changes made to the state of this account will be kept when switching forks\n    function makePersistent(address account) external;\n    function makePersistent(address account0, address account1) external;\n    function makePersistent(address account0, address account1, address account2) external;\n    function makePersistent(address[] calldata accounts) external;\n    // Revokes persistent status from the address, previously added via `makePersistent`\n    function revokePersistent(address account) external;\n    function revokePersistent(address[] calldata accounts) external;\n    // Returns true if the account is marked as persistent\n    function isPersistent(address account) external view returns (bool persistent);\n    // In forking mode, explicitly grant the given address cheatcode access\n    function allowCheatcodes(address account) external;\n    // Fetches the given transaction from the active fork and executes it on the current state\n    function transact(bytes32 txHash) external;\n    // Fetches the given transaction from the given fork and executes it on the current state\n    function transact(uint256 forkId, bytes32 txHash) external;\n}\n",
+        "license": "MIT"
+      }
+    },
+    "version": 1
+  },
+  "storageLayout": {
+    "storage": [
+      {
+        "astId": 5031,
+        "contract": "lib/forge-std/src/Base.sol:CommonBase",
+        "label": "stdstore",
+        "offset": 0,
+        "slot": "0",
+        "type": "t_struct(StdStorage)11144_storage"
+      }
+    ],
+    "types": {
+      "t_address": {
+        "encoding": "inplace",
+        "label": "address",
+        "numberOfBytes": "20"
+      },
+      "t_array(t_bytes32)dyn_storage": {
+        "encoding": "dynamic_array",
+        "label": "bytes32[]",
+        "numberOfBytes": "32",
+        "base": "t_bytes32"
+      },
+      "t_bool": {
+        "encoding": "inplace",
+        "label": "bool",
+        "numberOfBytes": "1"
+      },
+      "t_bytes32": {
+        "encoding": "inplace",
+        "label": "bytes32",
+        "numberOfBytes": "32"
+      },
+      "t_bytes4": {
+        "encoding": "inplace",
+        "label": "bytes4",
+        "numberOfBytes": "4"
+      },
+      "t_mapping(t_address,t_mapping(t_bytes4,t_mapping(t_bytes32,t_bool)))": {
+        "encoding": "mapping",
+        "key": "t_address",
+        "label": "mapping(address => mapping(bytes4 => mapping(bytes32 => bool)))",
+        "numberOfBytes": "32",
+        "value": "t_mapping(t_bytes4,t_mapping(t_bytes32,t_bool))"
+      },
+      "t_mapping(t_address,t_mapping(t_bytes4,t_mapping(t_bytes32,t_uint256)))": {
+        "encoding": "mapping",
+        "key": "t_address",
+        "label": "mapping(address => mapping(bytes4 => mapping(bytes32 => uint256)))",
+        "numberOfBytes": "32",
+        "value": "t_mapping(t_bytes4,t_mapping(t_bytes32,t_uint256))"
+      },
+      "t_mapping(t_bytes32,t_bool)": {
+        "encoding": "mapping",
+        "key": "t_bytes32",
+        "label": "mapping(bytes32 => bool)",
+        "numberOfBytes": "32",
+        "value": "t_bool"
+      },
+      "t_mapping(t_bytes32,t_uint256)": {
+        "encoding": "mapping",
+        "key": "t_bytes32",
+        "label": "mapping(bytes32 => uint256)",
+        "numberOfBytes": "32",
+        "value": "t_uint256"
+      },
+      "t_mapping(t_bytes4,t_mapping(t_bytes32,t_bool))": {
+        "encoding": "mapping",
+        "key": "t_bytes4",
+        "label": "mapping(bytes4 => mapping(bytes32 => bool))",
+        "numberOfBytes": "32",
+        "value": "t_mapping(t_bytes32,t_bool)"
+      },
+      "t_mapping(t_bytes4,t_mapping(t_bytes32,t_uint256))": {
+        "encoding": "mapping",
+        "key": "t_bytes4",
+        "label": "mapping(bytes4 => mapping(bytes32 => uint256))",
+        "numberOfBytes": "32",
+        "value": "t_mapping(t_bytes32,t_uint256)"
+      },
+      "t_struct(StdStorage)11144_storage": {
+        "encoding": "inplace",
+        "label": "struct StdStorage",
+        "numberOfBytes": "224",
+        "members": [
+          {
+            "astId": 11124,
+            "contract": "lib/forge-std/src/Base.sol:CommonBase",
+            "label": "slots",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_mapping(t_address,t_mapping(t_bytes4,t_mapping(t_bytes32,t_uint256)))"
+          },
+          {
+            "astId": 11132,
+            "contract": "lib/forge-std/src/Base.sol:CommonBase",
+            "label": "finds",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_mapping(t_address,t_mapping(t_bytes4,t_mapping(t_bytes32,t_bool)))"
+          },
+          {
+            "astId": 11135,
+            "contract": "lib/forge-std/src/Base.sol:CommonBase",
+            "label": "_keys",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_array(t_bytes32)dyn_storage"
+          },
+          {
+            "astId": 11137,
+            "contract": "lib/forge-std/src/Base.sol:CommonBase",
+            "label": "_sig",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_bytes4"
+          },
+          {
+            "astId": 11139,
+            "contract": "lib/forge-std/src/Base.sol:CommonBase",
+            "label": "_depth",
+            "offset": 0,
+            "slot": "4",
+            "type": "t_uint256"
+          },
+          {
+            "astId": 11141,
+            "contract": "lib/forge-std/src/Base.sol:CommonBase",
+            "label": "_target",
+            "offset": 0,
+            "slot": "5",
+            "type": "t_address"
+          },
+          {
+            "astId": 11143,
+            "contract": "lib/forge-std/src/Base.sol:CommonBase",
+            "label": "_set",
+            "offset": 0,
+            "slot": "6",
+            "type": "t_bytes32"
+          }
+        ]
+      },
+      "t_uint256": {
+        "encoding": "inplace",
+        "label": "uint256",
+        "numberOfBytes": "32"
+      }
+    }
+  },
+  "userdoc": {
+    "version": 1,
+    "kind": "user"
+  },
+  "devdoc": {
+    "version": 1,
+    "kind": "dev"
+  },
+  "ast": {
+    "absolutePath": "lib/forge-std/src/Base.sol",
+    "id": 5045,
+    "exportedSymbols": {
+      "CommonBase": [
+        5032
+      ],
+      "ScriptBase": [
+        5044
+      ],
+      "StdStorage": [
+        11144
+      ],
+      "TestBase": [
+        5035
+      ],
+      "Vm": [
+        16595
+      ],
+      "VmSafe": [
+        16123
+      ]
+    },
+    "nodeType": "SourceUnit",
+    "src": "32:1761:13",
+    "nodes": [
+      {
+        "id": 4971,
+        "nodeType": "PragmaDirective",
+        "src": "32:31:13",
+        "nodes": [],
+        "literals": [
+          "solidity",
+          ">=",
+          "0.6",
+          ".2",
+          "<",
+          "0.9",
+          ".0"
+        ]
+      },
+      {
+        "id": 4973,
+        "nodeType": "ImportDirective",
+        "src": "65:44:13",
+        "nodes": [],
+        "absolutePath": "lib/forge-std/src/StdStorage.sol",
+        "file": "./StdStorage.sol",
+        "nameLocation": "-1:-1:-1",
+        "scope": 5045,
+        "sourceUnit": 12784,
+        "symbolAliases": [
+          {
+            "foreign": {
+              "id": 4972,
+              "name": "StdStorage",
+              "nodeType": "Identifier",
+              "overloadedDeclarations": [],
+              "referencedDeclaration": 11144,
+              "src": "73:10:13",
+              "typeDescriptions": {}
+            },
+            "nameLocation": "-1:-1:-1"
+          }
+        ],
+        "unitAlias": ""
+      },
+      {
+        "id": 4976,
+        "nodeType": "ImportDirective",
+        "src": "110:36:13",
+        "nodes": [],
+        "absolutePath": "lib/forge-std/src/Vm.sol",
+        "file": "./Vm.sol",
+        "nameLocation": "-1:-1:-1",
+        "scope": 5045,
+        "sourceUnit": 16596,
+        "symbolAliases": [
+          {
+            "foreign": {
+              "id": 4974,
+              "name": "Vm",
+              "nodeType": "Identifier",
+              "overloadedDeclarations": [],
+              "referencedDeclaration": 16595,
+              "src": "118:2:13",
+              "typeDescriptions": {}
+            },
+            "nameLocation": "-1:-1:-1"
+          },
+          {
+            "foreign": {
+              "id": 4975,
+              "name": "VmSafe",
+              "nodeType": "Identifier",
+              "overloadedDeclarations": [],
+              "referencedDeclaration": 16123,
+              "src": "122:6:13",
+              "typeDescriptions": {}
+            },
+            "nameLocation": "-1:-1:-1"
+          }
+        ],
+        "unitAlias": ""
+      },
+      {
+        "id": 5032,
+        "nodeType": "ContractDefinition",
+        "src": "148:1493:13",
+        "nodes": [
+          {
+            "id": 4990,
+            "nodeType": "VariableDeclaration",
+            "src": "254:94:13",
+            "nodes": [],
+            "constant": true,
+            "mutability": "constant",
+            "name": "VM_ADDRESS",
+            "nameLocation": "280:10:13",
+            "scope": 5032,
+            "stateVariable": true,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_address",
+              "typeString": "address"
+            },
+            "typeName": {
+              "id": 4977,
+              "name": "address",
+              "nodeType": "ElementaryTypeName",
+              "src": "254:7:13",
+              "stateMutability": "nonpayable",
+              "typeDescriptions": {
+                "typeIdentifier": "t_address",
+                "typeString": "address"
+              }
+            },
+            "value": {
+              "arguments": [
+                {
+                  "arguments": [
+                    {
+                      "arguments": [
+                        {
+                          "arguments": [
+                            {
+                              "hexValue": "6865766d20636865617420636f6465",
+                              "id": 4985,
+                              "isConstant": false,
+                              "isLValue": false,
+                              "isPure": true,
+                              "kind": "string",
+                              "lValueRequested": false,
+                              "nodeType": "Literal",
+                              "src": "327:17:13",
+                              "typeDescriptions": {
+                                "typeIdentifier": "t_stringliteral_885cb69240a935d632d79c317109709ecfa91a80626ff3989d68f67f5b1dd12d",
+                                "typeString": "literal_string \"hevm cheat code\""
+                              },
+                              "value": "hevm cheat code"
+                            }
+                          ],
+                          "expression": {
+                            "argumentTypes": [
+                              {
+                                "typeIdentifier": "t_stringliteral_885cb69240a935d632d79c317109709ecfa91a80626ff3989d68f67f5b1dd12d",
+                                "typeString": "literal_string \"hevm cheat code\""
+                              }
+                            ],
+                            "id": 4984,
+                            "name": "keccak256",
+                            "nodeType": "Identifier",
+                            "overloadedDeclarations": [],
+                            "referencedDeclaration": -8,
+                            "src": "317:9:13",
+                            "typeDescriptions": {
+                              "typeIdentifier": "t_function_keccak256_pure$_t_bytes_memory_ptr_$returns$_t_bytes32_$",
+                              "typeString": "function (bytes memory) pure returns (bytes32)"
+                            }
+                          },
+                          "id": 4986,
+                          "isConstant": false,
+                          "isLValue": false,
+                          "isPure": true,
+                          "kind": "functionCall",
+                          "lValueRequested": false,
+                          "nameLocations": [],
+                          "names": [],
+                          "nodeType": "FunctionCall",
+                          "src": "317:28:13",
+                          "tryCall": false,
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_bytes32",
+                            "typeString": "bytes32"
+                          }
+                        }
+                      ],
+                      "expression": {
+                        "argumentTypes": [
+                          {
+                            "typeIdentifier": "t_bytes32",
+                            "typeString": "bytes32"
+                          }
+                        ],
+                        "id": 4983,
+                        "isConstant": false,
+                        "isLValue": false,
+                        "isPure": true,
+                        "lValueRequested": false,
+                        "nodeType": "ElementaryTypeNameExpression",
+                        "src": "309:7:13",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_type$_t_uint256_$",
+                          "typeString": "type(uint256)"
+                        },
+                        "typeName": {
+                          "id": 4982,
+                          "name": "uint256",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "309:7:13",
+                          "typeDescriptions": {}
+                        }
+                      },
+                      "id": 4987,
+                      "isConstant": false,
+                      "isLValue": false,
+                      "isPure": true,
+                      "kind": "typeConversion",
+                      "lValueRequested": false,
+                      "nameLocations": [],
+                      "names": [],
+                      "nodeType": "FunctionCall",
+                      "src": "309:37:13",
+                      "tryCall": false,
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_uint256",
+                        "typeString": "uint256"
+                      }
+                    }
+                  ],
+                  "expression": {
+                    "argumentTypes": [
+                      {
+                        "typeIdentifier": "t_uint256",
+                        "typeString": "uint256"
+                      }
+                    ],
+                    "id": 4981,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": true,
+                    "lValueRequested": false,
+                    "nodeType": "ElementaryTypeNameExpression",
+                    "src": "301:7:13",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_type$_t_uint160_$",
+                      "typeString": "type(uint160)"
+                    },
+                    "typeName": {
+                      "id": 4980,
+                      "name": "uint160",
+                      "nodeType": "ElementaryTypeName",
+                      "src": "301:7:13",
+                      "typeDescriptions": {}
+                    }
+                  },
+                  "id": 4988,
+                  "isConstant": false,
+                  "isLValue": false,
+                  "isPure": true,
+                  "kind": "typeConversion",
+                  "lValueRequested": false,
+                  "nameLocations": [],
+                  "names": [],
+                  "nodeType": "FunctionCall",
+                  "src": "301:46:13",
+                  "tryCall": false,
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint160",
+                    "typeString": "uint160"
+                  }
+                }
+              ],
+              "expression": {
+                "argumentTypes": [
+                  {
+                    "typeIdentifier": "t_uint160",
+                    "typeString": "uint160"
+                  }
+                ],
+                "id": 4979,
+                "isConstant": false,
+                "isLValue": false,
+                "isPure": true,
+                "lValueRequested": false,
+                "nodeType": "ElementaryTypeNameExpression",
+                "src": "293:7:13",
+                "typeDescriptions": {
+                  "typeIdentifier": "t_type$_t_address_$",
+                  "typeString": "type(address)"
+                },
+                "typeName": {
+                  "id": 4978,
+                  "name": "address",
+                  "nodeType": "ElementaryTypeName",
+                  "src": "293:7:13",
+                  "typeDescriptions": {}
+                }
+              },
+              "id": 4989,
+              "isConstant": false,
+              "isLValue": false,
+              "isPure": true,
+              "kind": "typeConversion",
+              "lValueRequested": false,
+              "nameLocations": [],
+              "names": [],
+              "nodeType": "FunctionCall",
+              "src": "293:55:13",
+              "tryCall": false,
+              "typeDescriptions": {
+                "typeIdentifier": "t_address",
+                "typeString": "address"
+              }
+            },
+            "visibility": "internal"
+          },
+          {
+            "id": 4993,
+            "nodeType": "VariableDeclaration",
+            "src": "438:78:13",
+            "nodes": [],
+            "constant": true,
+            "mutability": "constant",
+            "name": "CONSOLE",
+            "nameLocation": "464:7:13",
+            "scope": 5032,
+            "stateVariable": true,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_address",
+              "typeString": "address"
+            },
+            "typeName": {
+              "id": 4991,
+              "name": "address",
+              "nodeType": "ElementaryTypeName",
+              "src": "438:7:13",
+              "stateMutability": "nonpayable",
+              "typeDescriptions": {
+                "typeIdentifier": "t_address",
+                "typeString": "address"
+              }
+            },
+            "value": {
+              "hexValue": "307830303030303030303030303030303030303036333646366537333646366336353265366336663637",
+              "id": 4992,
+              "isConstant": false,
+              "isLValue": false,
+              "isPure": true,
+              "kind": "number",
+              "lValueRequested": false,
+              "nodeType": "Literal",
+              "src": "474:42:13",
+              "typeDescriptions": {
+                "typeIdentifier": "t_address",
+                "typeString": "address"
+              },
+              "value": "0x000000000000000000636F6e736F6c652e6c6f67"
+            },
+            "visibility": "internal"
+          },
+          {
+            "id": 4996,
+            "nodeType": "VariableDeclaration",
+            "src": "623:86:13",
+            "nodes": [],
+            "constant": true,
+            "mutability": "constant",
+            "name": "CREATE2_FACTORY",
+            "nameLocation": "649:15:13",
+            "scope": 5032,
+            "stateVariable": true,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_address",
+              "typeString": "address"
+            },
+            "typeName": {
+              "id": 4994,
+              "name": "address",
+              "nodeType": "ElementaryTypeName",
+              "src": "623:7:13",
+              "stateMutability": "nonpayable",
+              "typeDescriptions": {
+                "typeIdentifier": "t_address",
+                "typeString": "address"
+              }
+            },
+            "value": {
+              "hexValue": "307834653539623434383437623337393537383538383932306341373846624632366330423439353643",
+              "id": 4995,
+              "isConstant": false,
+              "isLValue": false,
+              "isPure": true,
+              "kind": "number",
+              "lValueRequested": false,
+              "nodeType": "Literal",
+              "src": "667:42:13",
+              "typeDescriptions": {
+                "typeIdentifier": "t_address",
+                "typeString": "address"
+              },
+              "value": "0x4e59b44847b379578588920cA78FbF26c0B4956C"
+            },
+            "visibility": "internal"
+          },
+          {
+            "id": 5010,
+            "nodeType": "VariableDeclaration",
+            "src": "812:105:13",
+            "nodes": [],
+            "constant": true,
+            "mutability": "constant",
+            "name": "DEFAULT_SENDER",
+            "nameLocation": "838:14:13",
+            "scope": 5032,
+            "stateVariable": true,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_address",
+              "typeString": "address"
+            },
+            "typeName": {
+              "id": 4997,
+              "name": "address",
+              "nodeType": "ElementaryTypeName",
+              "src": "812:7:13",
+              "stateMutability": "nonpayable",
+              "typeDescriptions": {
+                "typeIdentifier": "t_address",
+                "typeString": "address"
+              }
+            },
+            "value": {
+              "arguments": [
+                {
+                  "arguments": [
+                    {
+                      "arguments": [
+                        {
+                          "arguments": [
+                            {
+                              "hexValue": "666f756e6472792064656661756c742063616c6c6572",
+                              "id": 5005,
+                              "isConstant": false,
+                              "isLValue": false,
+                              "isPure": true,
+                              "kind": "string",
+                              "lValueRequested": false,
+                              "nodeType": "Literal",
+                              "src": "889:24:13",
+                              "typeDescriptions": {
+                                "typeIdentifier": "t_stringliteral_ee6e12ba256a78bc5d3ab9651804c8ab1f12e6bbf3894d4083f33e07309d1f38",
+                                "typeString": "literal_string \"foundry default caller\""
+                              },
+                              "value": "foundry default caller"
+                            }
+                          ],
+                          "expression": {
+                            "argumentTypes": [
+                              {
+                                "typeIdentifier": "t_stringliteral_ee6e12ba256a78bc5d3ab9651804c8ab1f12e6bbf3894d4083f33e07309d1f38",
+                                "typeString": "literal_string \"foundry default caller\""
+                              }
+                            ],
+                            "id": 5004,
+                            "name": "keccak256",
+                            "nodeType": "Identifier",
+                            "overloadedDeclarations": [],
+                            "referencedDeclaration": -8,
+                            "src": "879:9:13",
+                            "typeDescriptions": {
+                              "typeIdentifier": "t_function_keccak256_pure$_t_bytes_memory_ptr_$returns$_t_bytes32_$",
+                              "typeString": "function (bytes memory) pure returns (bytes32)"
+                            }
+                          },
+                          "id": 5006,
+                          "isConstant": false,
+                          "isLValue": false,
+                          "isPure": true,
+                          "kind": "functionCall",
+                          "lValueRequested": false,
+                          "nameLocations": [],
+                          "names": [],
+                          "nodeType": "FunctionCall",
+                          "src": "879:35:13",
+                          "tryCall": false,
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_bytes32",
+                            "typeString": "bytes32"
+                          }
+                        }
+                      ],
+                      "expression": {
+                        "argumentTypes": [
+                          {
+                            "typeIdentifier": "t_bytes32",
+                            "typeString": "bytes32"
+                          }
+                        ],
+                        "id": 5003,
+                        "isConstant": false,
+                        "isLValue": false,
+                        "isPure": true,
+                        "lValueRequested": false,
+                        "nodeType": "ElementaryTypeNameExpression",
+                        "src": "871:7:13",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_type$_t_uint256_$",
+                          "typeString": "type(uint256)"
+                        },
+                        "typeName": {
+                          "id": 5002,
+                          "name": "uint256",
+                          "nodeType": "ElementaryTypeName",
+                          "src": "871:7:13",
+                          "typeDescriptions": {}
+                        }
+                      },
+                      "id": 5007,
+                      "isConstant": false,
+                      "isLValue": false,
+                      "isPure": true,
+                      "kind": "typeConversion",
+                      "lValueRequested": false,
+                      "nameLocations": [],
+                      "names": [],
+                      "nodeType": "FunctionCall",
+                      "src": "871:44:13",
+                      "tryCall": false,
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_uint256",
+                        "typeString": "uint256"
+                      }
+                    }
+                  ],
+                  "expression": {
+                    "argumentTypes": [
+                      {
+                        "typeIdentifier": "t_uint256",
+                        "typeString": "uint256"
+                      }
+                    ],
+                    "id": 5001,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": true,
+                    "lValueRequested": false,
+                    "nodeType": "ElementaryTypeNameExpression",
+                    "src": "863:7:13",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_type$_t_uint160_$",
+                      "typeString": "type(uint160)"
+                    },
+                    "typeName": {
+                      "id": 5000,
+                      "name": "uint160",
+                      "nodeType": "ElementaryTypeName",
+                      "src": "863:7:13",
+                      "typeDescriptions": {}
+                    }
+                  },
+                  "id": 5008,
+                  "isConstant": false,
+                  "isLValue": false,
+                  "isPure": true,
+                  "kind": "typeConversion",
+                  "lValueRequested": false,
+                  "nameLocations": [],
+                  "names": [],
+                  "nodeType": "FunctionCall",
+                  "src": "863:53:13",
+                  "tryCall": false,
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint160",
+                    "typeString": "uint160"
+                  }
+                }
+              ],
+              "expression": {
+                "argumentTypes": [
+                  {
+                    "typeIdentifier": "t_uint160",
+                    "typeString": "uint160"
+                  }
+                ],
+                "id": 4999,
+                "isConstant": false,
+                "isLValue": false,
+                "isPure": true,
+                "lValueRequested": false,
+                "nodeType": "ElementaryTypeNameExpression",
+                "src": "855:7:13",
+                "typeDescriptions": {
+                  "typeIdentifier": "t_type$_t_address_$",
+                  "typeString": "type(address)"
+                },
+                "typeName": {
+                  "id": 4998,
+                  "name": "address",
+                  "nodeType": "ElementaryTypeName",
+                  "src": "855:7:13",
+                  "typeDescriptions": {}
+                }
+              },
+              "id": 5009,
+              "isConstant": false,
+              "isLValue": false,
+              "isPure": true,
+              "kind": "typeConversion",
+              "lValueRequested": false,
+              "nameLocations": [],
+              "names": [],
+              "nodeType": "FunctionCall",
+              "src": "855:62:13",
+              "tryCall": false,
+              "typeDescriptions": {
+                "typeIdentifier": "t_address",
+                "typeString": "address"
+              }
+            },
+            "visibility": "internal"
+          },
+          {
+            "id": 5013,
+            "nodeType": "VariableDeclaration",
+            "src": "992:92:13",
+            "nodes": [],
+            "constant": true,
+            "mutability": "constant",
+            "name": "DEFAULT_TEST_CONTRACT",
+            "nameLocation": "1018:21:13",
+            "scope": 5032,
+            "stateVariable": true,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_address",
+              "typeString": "address"
+            },
+            "typeName": {
+              "id": 5011,
+              "name": "address",
+              "nodeType": "ElementaryTypeName",
+              "src": "992:7:13",
+              "stateMutability": "nonpayable",
+              "typeDescriptions": {
+                "typeIdentifier": "t_address",
+                "typeString": "address"
+              }
+            },
+            "value": {
+              "hexValue": "307835363135644542373938424233453464466130313339644661316233443433334363323362373266",
+              "id": 5012,
+              "isConstant": false,
+              "isLValue": false,
+              "isPure": true,
+              "kind": "number",
+              "lValueRequested": false,
+              "nodeType": "Literal",
+              "src": "1042:42:13",
+              "typeDescriptions": {
+                "typeIdentifier": "t_address",
+                "typeString": "address"
+              },
+              "value": "0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f"
+            },
+            "visibility": "internal"
+          },
+          {
+            "id": 5016,
+            "nodeType": "VariableDeclaration",
+            "src": "1158:89:13",
+            "nodes": [],
+            "constant": true,
+            "mutability": "constant",
+            "name": "MULTICALL3_ADDRESS",
+            "nameLocation": "1184:18:13",
+            "scope": 5032,
+            "stateVariable": true,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_address",
+              "typeString": "address"
+            },
+            "typeName": {
+              "id": 5014,
+              "name": "address",
+              "nodeType": "ElementaryTypeName",
+              "src": "1158:7:13",
+              "stateMutability": "nonpayable",
+              "typeDescriptions": {
+                "typeIdentifier": "t_address",
+                "typeString": "address"
+              }
+            },
+            "value": {
+              "hexValue": "307863413131626465303539373762333633313136373032383836326245326131373339373643413131",
+              "id": 5015,
+              "isConstant": false,
+              "isLValue": false,
+              "isPure": true,
+              "kind": "number",
+              "lValueRequested": false,
+              "nodeType": "Literal",
+              "src": "1205:42:13",
+              "typeDescriptions": {
+                "typeIdentifier": "t_address",
+                "typeString": "address"
+              },
+              "value": "0xcA11bde05977b3631167028862bE2a173976CA11"
+            },
+            "visibility": "internal"
+          },
+          {
+            "id": 5019,
+            "nodeType": "VariableDeclaration",
+            "src": "1294:130:13",
+            "nodes": [],
+            "constant": true,
+            "mutability": "constant",
+            "name": "SECP256K1_ORDER",
+            "nameLocation": "1320:15:13",
+            "scope": 5032,
+            "stateVariable": true,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_uint256",
+              "typeString": "uint256"
+            },
+            "typeName": {
+              "id": 5017,
+              "name": "uint256",
+              "nodeType": "ElementaryTypeName",
+              "src": "1294:7:13",
+              "typeDescriptions": {
+                "typeIdentifier": "t_uint256",
+                "typeString": "uint256"
+              }
+            },
+            "value": {
+              "hexValue": "313135373932303839323337333136313935343233353730393835303038363837393037383532383337353634323739303734393034333832363035313633313431353138313631343934333337",
+              "id": 5018,
+              "isConstant": false,
+              "isLValue": false,
+              "isPure": true,
+              "kind": "number",
+              "lValueRequested": false,
+              "nodeType": "Literal",
+              "src": "1346:78:13",
+              "typeDescriptions": {
+                "typeIdentifier": "t_rational_115792089237316195423570985008687907852837564279074904382605163141518161494337_by_1",
+                "typeString": "int_const 1157...(70 digits omitted)...4337"
+              },
+              "value": "115792089237316195423570985008687907852837564279074904382605163141518161494337"
+            },
+            "visibility": "internal"
+          },
+          {
+            "id": 5022,
+            "nodeType": "VariableDeclaration",
+            "src": "1431:126:13",
+            "nodes": [],
+            "constant": true,
+            "mutability": "constant",
+            "name": "UINT256_MAX",
+            "nameLocation": "1457:11:13",
+            "scope": 5032,
+            "stateVariable": true,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_uint256",
+              "typeString": "uint256"
+            },
+            "typeName": {
+              "id": 5020,
+              "name": "uint256",
+              "nodeType": "ElementaryTypeName",
+              "src": "1431:7:13",
+              "typeDescriptions": {
+                "typeIdentifier": "t_uint256",
+                "typeString": "uint256"
+              }
+            },
+            "value": {
+              "hexValue": "313135373932303839323337333136313935343233353730393835303038363837393037383533323639393834363635363430353634303339343537353834303037393133313239363339393335",
+              "id": 5021,
+              "isConstant": false,
+              "isLValue": false,
+              "isPure": true,
+              "kind": "number",
+              "lValueRequested": false,
+              "nodeType": "Literal",
+              "src": "1479:78:13",
+              "typeDescriptions": {
+                "typeIdentifier": "t_rational_115792089237316195423570985008687907853269984665640564039457584007913129639935_by_1",
+                "typeString": "int_const 1157...(70 digits omitted)...9935"
+              },
+              "value": "115792089237316195423570985008687907853269984665640564039457584007913129639935"
+            },
+            "visibility": "internal"
+          },
+          {
+            "id": 5028,
+            "nodeType": "VariableDeclaration",
+            "src": "1564:40:13",
+            "nodes": [],
+            "constant": true,
+            "mutability": "constant",
+            "name": "vm",
+            "nameLocation": "1585:2:13",
+            "scope": 5032,
+            "stateVariable": true,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_contract$_Vm_$16595",
+              "typeString": "contract Vm"
+            },
+            "typeName": {
+              "id": 5024,
+              "nodeType": "UserDefinedTypeName",
+              "pathNode": {
+                "id": 5023,
+                "name": "Vm",
+                "nameLocations": [
+                  "1564:2:13"
+                ],
+                "nodeType": "IdentifierPath",
+                "referencedDeclaration": 16595,
+                "src": "1564:2:13"
+              },
+              "referencedDeclaration": 16595,
+              "src": "1564:2:13",
+              "typeDescriptions": {
+                "typeIdentifier": "t_contract$_Vm_$16595",
+                "typeString": "contract Vm"
+              }
+            },
+            "value": {
+              "arguments": [
+                {
+                  "id": 5026,
+                  "name": "VM_ADDRESS",
+                  "nodeType": "Identifier",
+                  "overloadedDeclarations": [],
+                  "referencedDeclaration": 4990,
+                  "src": "1593:10:13",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  }
+                }
+              ],
+              "expression": {
+                "argumentTypes": [
+                  {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  }
+                ],
+                "id": 5025,
+                "name": "Vm",
+                "nodeType": "Identifier",
+                "overloadedDeclarations": [],
+                "referencedDeclaration": 16595,
+                "src": "1590:2:13",
+                "typeDescriptions": {
+                  "typeIdentifier": "t_type$_t_contract$_Vm_$16595_$",
+                  "typeString": "type(contract Vm)"
+                }
+              },
+              "id": 5027,
+              "isConstant": false,
+              "isLValue": false,
+              "isPure": true,
+              "kind": "typeConversion",
+              "lValueRequested": false,
+              "nameLocations": [],
+              "names": [],
+              "nodeType": "FunctionCall",
+              "src": "1590:14:13",
+              "tryCall": false,
+              "typeDescriptions": {
+                "typeIdentifier": "t_contract$_Vm_$16595",
+                "typeString": "contract Vm"
+              }
+            },
+            "visibility": "internal"
+          },
+          {
+            "id": 5031,
+            "nodeType": "VariableDeclaration",
+            "src": "1610:28:13",
+            "nodes": [],
+            "constant": false,
+            "mutability": "mutable",
+            "name": "stdstore",
+            "nameLocation": "1630:8:13",
+            "scope": 5032,
+            "stateVariable": true,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_struct$_StdStorage_$11144_storage",
+              "typeString": "struct StdStorage"
+            },
+            "typeName": {
+              "id": 5030,
+              "nodeType": "UserDefinedTypeName",
+              "pathNode": {
+                "id": 5029,
+                "name": "StdStorage",
+                "nameLocations": [
+                  "1610:10:13"
+                ],
+                "nodeType": "IdentifierPath",
+                "referencedDeclaration": 11144,
+                "src": "1610:10:13"
+              },
+              "referencedDeclaration": 11144,
+              "src": "1610:10:13",
+              "typeDescriptions": {
+                "typeIdentifier": "t_struct$_StdStorage_$11144_storage_ptr",
+                "typeString": "struct StdStorage"
+              }
+            },
+            "visibility": "internal"
+          }
+        ],
+        "abstract": true,
+        "baseContracts": [],
+        "canonicalName": "CommonBase",
+        "contractDependencies": [],
+        "contractKind": "contract",
+        "fullyImplemented": true,
+        "linearizedBaseContracts": [
+          5032
+        ],
+        "name": "CommonBase",
+        "nameLocation": "166:10:13",
+        "scope": 5045,
+        "usedErrors": [],
+        "usedEvents": []
+      },
+      {
+        "id": 5035,
+        "nodeType": "ContractDefinition",
+        "src": "1643:43:13",
+        "nodes": [],
+        "abstract": true,
+        "baseContracts": [
+          {
+            "baseName": {
+              "id": 5033,
+              "name": "CommonBase",
+              "nameLocations": [
+                "1673:10:13"
+              ],
+              "nodeType": "IdentifierPath",
+              "referencedDeclaration": 5032,
+              "src": "1673:10:13"
+            },
+            "id": 5034,
+            "nodeType": "InheritanceSpecifier",
+            "src": "1673:10:13"
+          }
+        ],
+        "canonicalName": "TestBase",
+        "contractDependencies": [],
+        "contractKind": "contract",
+        "fullyImplemented": true,
+        "linearizedBaseContracts": [
+          5035,
+          5032
+        ],
+        "name": "TestBase",
+        "nameLocation": "1661:8:13",
+        "scope": 5045,
+        "usedErrors": [],
+        "usedEvents": []
+      },
+      {
+        "id": 5044,
+        "nodeType": "ContractDefinition",
+        "src": "1688:104:13",
+        "nodes": [
+          {
+            "id": 5043,
+            "nodeType": "VariableDeclaration",
+            "src": "1737:52:13",
+            "nodes": [],
+            "constant": true,
+            "mutability": "constant",
+            "name": "vmSafe",
+            "nameLocation": "1762:6:13",
+            "scope": 5044,
+            "stateVariable": true,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_contract$_VmSafe_$16123",
+              "typeString": "contract VmSafe"
+            },
+            "typeName": {
+              "id": 5039,
+              "nodeType": "UserDefinedTypeName",
+              "pathNode": {
+                "id": 5038,
+                "name": "VmSafe",
+                "nameLocations": [
+                  "1737:6:13"
+                ],
+                "nodeType": "IdentifierPath",
+                "referencedDeclaration": 16123,
+                "src": "1737:6:13"
+              },
+              "referencedDeclaration": 16123,
+              "src": "1737:6:13",
+              "typeDescriptions": {
+                "typeIdentifier": "t_contract$_VmSafe_$16123",
+                "typeString": "contract VmSafe"
+              }
+            },
+            "value": {
+              "arguments": [
+                {
+                  "id": 5041,
+                  "name": "VM_ADDRESS",
+                  "nodeType": "Identifier",
+                  "overloadedDeclarations": [],
+                  "referencedDeclaration": 4990,
+                  "src": "1778:10:13",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  }
+                }
+              ],
+              "expression": {
+                "argumentTypes": [
+                  {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  }
+                ],
+                "id": 5040,
+                "name": "VmSafe",
+                "nodeType": "Identifier",
+                "overloadedDeclarations": [],
+                "referencedDeclaration": 16123,
+                "src": "1771:6:13",
+                "typeDescriptions": {
+                  "typeIdentifier": "t_type$_t_contract$_VmSafe_$16123_$",
+                  "typeString": "type(contract VmSafe)"
+                }
+              },
+              "id": 5042,
+              "isConstant": false,
+              "isLValue": false,
+              "isPure": true,
+              "kind": "typeConversion",
+              "lValueRequested": false,
+              "nameLocations": [],
+              "names": [],
+              "nodeType": "FunctionCall",
+              "src": "1771:18:13",
+              "tryCall": false,
+              "typeDescriptions": {
+                "typeIdentifier": "t_contract$_VmSafe_$16123",
+                "typeString": "contract VmSafe"
+              }
+            },
+            "visibility": "internal"
+          }
+        ],
+        "abstract": true,
+        "baseContracts": [
+          {
+            "baseName": {
+              "id": 5036,
+              "name": "CommonBase",
+              "nameLocations": [
+                "1720:10:13"
+              ],
+              "nodeType": "IdentifierPath",
+              "referencedDeclaration": 5032,
+              "src": "1720:10:13"
+            },
+            "id": 5037,
+            "nodeType": "InheritanceSpecifier",
+            "src": "1720:10:13"
+          }
+        ],
+        "canonicalName": "ScriptBase",
+        "contractDependencies": [],
+        "contractKind": "contract",
+        "fullyImplemented": true,
+        "linearizedBaseContracts": [
+          5044,
+          5032
+        ],
+        "name": "ScriptBase",
+        "nameLocation": "1706:10:13",
+        "scope": 5045,
+        "usedErrors": [],
+        "usedEvents": []
+      }
+    ],
+    "license": "MIT"
+  },
+  "id": 13
+}
